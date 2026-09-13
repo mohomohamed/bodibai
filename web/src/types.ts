@@ -86,10 +86,44 @@ export function getGoogleMapsUrl(query: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
+export function getGoogleMapsDirectionsUrl(query: string): string {
+  const clean = query.trim();
+  const q = clean.toLowerCase().includes("maldives") ? clean : `${clean} Maldives`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}&travelmode=driving`;
+}
+
+export function getGoogleMapsMultiRouteUrl(stops: { address?: string; area?: string; title?: string }[]): string {
+  const cleanStops = stops
+    .map((s) => {
+      const addr = (s.address || "").trim();
+      const area = (s.area || "").trim();
+      const title = (s.title || "").trim();
+      if (addr) return addr.toLowerCase().includes("maldives") ? addr : `${addr}, ${area || "Malé"} Maldives`;
+      if (title) return `${title}, ${area || "Malé"} Maldives`;
+      return `${area || "Malé"} Maldives`;
+    })
+    .filter(Boolean);
+
+  if (cleanStops.length === 0) return "https://www.google.com/maps";
+  if (cleanStops.length === 1) return getGoogleMapsDirectionsUrl(cleanStops[0]);
+
+  // Google Maps URL scheme supports destination + up to 9 waypoints
+  const waypoints = cleanStops.slice(0, -1).slice(0, 9);
+  const destination = cleanStops[cleanStops.length - 1];
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&waypoints=${encodeURIComponent(waypoints.join("|"))}&travelmode=driving`;
+}
+
 export function getGoogleMapsEmbedUrl(query: string): string {
   const clean = query.trim();
   const q = clean.toLowerCase().includes("maldives") ? clean : `${clean} Maldives`;
   return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+}
+
+export const ADMIN_USERS = ["mohamed", "shaufa"] as const;
+
+export function isAdminUser(name?: string): boolean {
+  if (!name) return false;
+  return ADMIN_USERS.includes(name.trim().toLowerCase() as any);
 }
 
 export const MALDIVES_PRESETS = [
@@ -113,4 +147,5 @@ export const DEFAULT_GROUPS = [
   "Moho Maama Family",
   "Moho Neighbours",
 ] as const;
+
 

@@ -1,4 +1,22 @@
-import { Download, Edit3, FileSpreadsheet, LogOut, Plus, RefreshCw, ShieldCheck, Trash2, Truck, UploadCloud, Users } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  Edit3,
+  Eye,
+  EyeOff,
+  FileSpreadsheet,
+  KeyRound,
+  Lock,
+  LogOut,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+  Truck,
+  UploadCloud,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 import { downloadExport } from "../api";
 import { type Driver, type DriverInput, type RecordItem, type SyncStatus } from "../types";
@@ -7,9 +25,18 @@ import { ImportPanel } from "./ImportPanel";
 import { Modal } from "./Modal";
 import { SyncBadge } from "./SyncBadge";
 
+function cleanMaldivesPhone(phone?: string): string {
+  if (!phone) return "";
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("960")) return digits;
+  if (digits.length === 7) return `960${digits}`;
+  return digits;
+}
+
 export function SettingsPanel({
   token,
   userName,
+  appPassword = "",
   drivers,
   groups = [],
   records = [],
@@ -22,11 +49,14 @@ export function SettingsPanel({
   onDeleteDriver,
   onSaveGroup,
   onDeleteGroup,
+  onSaveAppPassword,
+  onPreviewDriver,
   onImport,
   notify,
 }: {
   token: string;
   userName: string;
+  appPassword?: string;
   drivers: Driver[];
   groups?: string[];
   records?: RecordItem[];
@@ -39,14 +69,53 @@ export function SettingsPanel({
   onDeleteDriver: (id: string) => Promise<void>;
   onSaveGroup: (name: string, oldName?: string) => Promise<void>;
   onDeleteGroup: (name: string) => Promise<void>;
+  onSaveAppPassword?: (password: string) => Promise<void>;
+  onPreviewDriver?: (driver: Driver) => void;
   onImport: (rows: Record<string, unknown>[]) => Promise<any>;
   notify: (message: string) => void;
 }) {
   const [editing, setEditing] = useState<Driver | "new" | null>(null);
   const [groupEditing, setGroupEditing] = useState<string | "new" | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [passwordEditing, setPasswordEditing] = useState(false);
+  const [customPassword, setCustomPassword] = useState(appPassword);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+
+  const handleCopyPassword = async () => {
+    if (!appPassword) return;
+    try {
+      await navigator.clipboard.writeText(appPassword);
+      setCopiedPassword(true);
+      setTimeout(() => setCopiedPassword(false), 2000);
+      notify("Password copied to clipboard");
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSavePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onSaveAppPassword) {
+      await onSaveAppPassword(customPassword.trim());
+      setPasswordEditing(false);
+      notify("App password updated locally");
+    }
+  };
+
+  const sendWhatsAppCredentials = (driver: Driver) => {
+    const password = appPassword || "";
+    const message = `Assalaamu Alaikum ${driver.name}! 🛵\n\nHere are your login credentials for *Bondibai App*:\n\n🌐 *App Link:* https://bodibai.vercel.app\n👤 *Username:* ${driver.name}\n🔑 *Password:* ${password || "[Password]"}\n\nOpen the link on your mobile phone to view your assigned delivery route, customer addresses, and Google Maps navigation.\n\n✨ _Bondibai App_`;
+
+    const cleanPhone = cleanMaldivesPhone(driver.phone);
+    const waUrl = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    notify(`Opening WhatsApp credentials for ${driver.name}`);
+  };
 
   const exportData = async () => {
     setExporting(true);
@@ -83,7 +152,7 @@ export function SettingsPanel({
         <div>
           <p className="eyebrow">App controls & Tools</p>
           <h1>Settings</h1>
-          <p>Manage fleet, data import/export, and Cloudflare synchronization.</p>
+          <p>Manage fleet, app credentials, data import/export, and Cloudflare synchronization.</p>
         </div>
       </div>
 
@@ -93,10 +162,82 @@ export function SettingsPanel({
           <div className="settings-icon"><ShieldCheck /></div>
           <div>
             <h2>Signed in as {userName}</h2>
-            <p>Your session token is stored securely in this browser and can be revoked at any time.</p>
+            <p>Admin privileges active (records, dispatch, settings & fleet management).</p>
             <button className="button secondary" onClick={() => void onLogout()}>
               <LogOut size={16} /> Sign out
             </button>
+          </div>
+        </article>
+
+        {/* App Access & Password Card for Admins */}
+        <article className="card settings-card password-settings-card">
+          <div className="settings-icon"><KeyRound /></div>
+          <div>
+            <h2>App Access & Password</h2>
+            <p className="settings-copy">
+              App password used by drivers and admins to sign in.
+            </p>
+            {passwordEditing ? (
+              <form onSubmit={handleSavePassword} className="password-edit-form">
+                <input
+                  type="text"
+                  value={customPassword}
+                  onChange={(e) => setCustomPassword(e.target.value)}
+                  placeholder="Enter app password"
+                  autoFocus
+                  required
+                />
+                <div className="inline-form-actions">
+                  <button type="submit" className="button primary compact">Save</button>
+                  <button type="button" className="button secondary compact" onClick={() => setPasswordEditing(false)}>Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <div className="password-display-box">
+                <div className="password-masked-row">
+                  <span className="password-label">Password:</span>
+                  <code className="password-value">
+                    {showPassword ? (appPassword || "Not set") : "••••••••••••"}
+                  </code>
+                </div>
+                <div className="password-actions">
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                  {appPassword && (
+                    <button
+                      type="button"
+                      className="icon-button"
+                      onClick={handleCopyPassword}
+                      title="Copy password"
+                      aria-label="Copy password"
+                    >
+                      {copiedPassword ? <Check size={16} className="copied-icon" /> : <Copy size={16} />}
+                    </button>
+                  )}
+                  {onSaveAppPassword && (
+                    <button
+                      type="button"
+                      className="icon-button"
+                      onClick={() => {
+                        setCustomPassword(appPassword);
+                        setPasswordEditing(true);
+                      }}
+                      title="Edit stored password"
+                      aria-label="Edit stored password"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </article>
 
@@ -145,7 +286,7 @@ export function SettingsPanel({
         <div className="section-title">
           <div>
             <h2>Fleet Drivers ({drivers.length})</h2>
-            <p>Manage available drivers for assignment and WhatsApp routing.</p>
+            <p>Manage fleet drivers, send WhatsApp credentials, and preview driver routes.</p>
           </div>
           <button className="button primary compact" onClick={() => setEditing("new")}>
             <Plus size={16} /> Add driver
@@ -164,6 +305,26 @@ export function SettingsPanel({
                 </p>
               </div>
               <div className="inline-actions">
+                {onPreviewDriver && (
+                  <button
+                    type="button"
+                    className="icon-button"
+                    title="Preview driver portal"
+                    aria-label="Preview driver portal"
+                    onClick={() => onPreviewDriver(driver)}
+                  >
+                    <Eye size={16} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="icon-button"
+                  title="Send login username & password via WhatsApp"
+                  aria-label="Send login via WhatsApp"
+                  onClick={() => sendWhatsAppCredentials(driver)}
+                >
+                  <KeyRound size={16} />
+                </button>
                 <button className="icon-button" aria-label="Edit driver" onClick={() => setEditing(driver)}>
                   <Edit3 size={16} />
                 </button>
@@ -176,6 +337,7 @@ export function SettingsPanel({
           {!drivers.length && <p className="subtle-empty">No drivers added yet.</p>}
         </div>
       </section>
+
 
       {/* Distribution Groups & Families Management */}
       <section className="card drivers-card">

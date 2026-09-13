@@ -48,7 +48,7 @@ export function MapModal({ target, onClose }: Props) {
 
   const cleanPhone = cleanMaldivesPhone(target.phone);
   const waUrl = cleanPhone
-    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Assalaamu Alaikum! Bondibai delivery for ${target.title}${target.portions ? ` (${target.portions} portion${target.portions === 1 ? "" : "s"})` : ""}.`)}`
+    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Assalaamu Alaikum! Bondibai delivery for ${target.title}. I am approaching your address at ${address || query}.\n\n✨ _Bondibai App_`)}`
     : null;
 
   const handleCopyAddress = async () => {

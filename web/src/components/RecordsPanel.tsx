@@ -278,7 +278,7 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
                       <Phone size={13} /> Call
                     </a>
                     <a
-                      href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Assalaamu Alaikum! Bondibai delivery for ${record.name} (${record.portions} portion${record.portions === 1 ? "" : "s"}).`)}`}
+                      href={`https://wa.me/${waPhone}?text=${encodeURIComponent(`Assalaamu Alaikum! Bondibai delivery for ${record.name}. I am approaching your address at ${addressText(primary)}.\n\n✨ _Bondibai App_`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="card-action-chip wa-action"

@@ -7,6 +7,8 @@ import {
   Compass,
   Edit3,
   ExternalLink,
+  Eye,
+  KeyRound,
   MapPin,
   MessageSquare,
   PackageCheck,
@@ -47,16 +49,20 @@ function cleanMaldivesPhone(phone?: string): string {
 export function DispatchPanel({
   records,
   drivers,
+  appPassword,
   saveRecord,
   saveDriver,
   deleteDriver,
+  onPreviewDriver,
   notify,
 }: {
   records: RecordItem[];
   drivers: Driver[];
+  appPassword?: string;
   saveRecord: (value: RecordInput, editing: boolean) => Promise<void>;
   saveDriver: (value: DriverInput, editing: boolean) => Promise<void>;
   deleteDriver: (id: string) => Promise<void>;
+  onPreviewDriver?: (driver: Driver) => void;
   notify: (message: string) => void;
 }) {
   const [editingDriver, setEditingDriver] = useState<Driver | "new" | null>(null);
@@ -140,13 +146,26 @@ export function DispatchPanel({
       })
       .join("\n\n");
 
-    const message = `🛵 *BONDIBAI DELIVERY ROUTE*\n👤 *Driver:* ${driver.name}\n📦 *Total Stops:* ${driverRecords.length} | *Portions:* ${driverPortions}\n\n${stopsText}\n\n✨ _Bondibai Logistics Maldives_`;
+    const message = `🛵 *BONDIBAI DELIVERY ROUTE*\n👤 *Driver:* ${driver.name}\n📦 *Total Stops:* ${driverRecords.length} | *Portions:* ${driverPortions}\n\n${stopsText}\n\n✨ _Bondibai App_`;
 
     const cleanPhone = cleanMaldivesPhone(driver.phone);
     const waUrl = cleanPhone
       ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
       : `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(waUrl, "_blank", "noopener,noreferrer");
+  };
+
+  // Send Driver Portal Login Credentials via WhatsApp
+  const sendWhatsAppCredentials = (driver: Driver) => {
+    const password = appPassword || "";
+    const message = `Assalaamu Alaikum ${driver.name}! 🛵\n\nHere are your login credentials for *Bondibai App*:\n\n🌐 *App Link:* https://bodibai.vercel.app\n👤 *Username:* ${driver.name}\n🔑 *Password:* ${password || "[Password]"}\n\nOpen the link on your mobile phone to view your assigned delivery route, customer addresses, and Google Maps navigation.\n\n✨ _Bondibai App_`;
+
+    const cleanPhone = cleanMaldivesPhone(driver.phone);
+    const waUrl = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    notify(`Opening WhatsApp credentials for ${driver.name}`);
   };
 
   const removeDriver = async (driver: Driver) => {
@@ -254,13 +273,31 @@ export function DispatchPanel({
                   </div>
 
                   <div className="driver-card-actions">
+                    {onPreviewDriver && (
+                      <button
+                        type="button"
+                        className="button compact secondary driver-portal-preview-btn"
+                        onClick={() => onPreviewDriver(driver)}
+                        title="Preview this driver's mobile portal"
+                      >
+                        <Eye size={14} /> Portal
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="button whatsapp-route-btn"
+                      className="button compact secondary send-creds-btn"
+                      onClick={() => sendWhatsAppCredentials(driver)}
+                      title="Send login username & password to driver via WhatsApp"
+                    >
+                      <KeyRound size={14} /> WhatsApp Login
+                    </button>
+                    <button
+                      type="button"
+                      className="button compact whatsapp-route-btn"
                       onClick={() => sendWhatsAppRoute(driver, assignedList)}
                       title="Send route stop list to driver WhatsApp"
                     >
-                      <Send size={15} /> WhatsApp Route
+                      <Send size={14} /> Route
                     </button>
                     <button
                       type="button"
@@ -280,6 +317,7 @@ export function DispatchPanel({
                     </button>
                   </div>
                 </div>
+
 
                 {/* Progress bar */}
                 <div className="driver-progress-box">
