@@ -47,6 +47,7 @@ export function RecordsPanel({ records, drivers, groups = [], isAdmin = false, s
   const [query, setQuery] = useState(""), [area, setArea] = useState("all"), [status, setStatus] = useState("all"), [groupFilter, setGroupFilter] = useState("all");
   const [addressFilter, setAddressFilter] = useState<"all" | "missing" | "assigned">("all");
   const [deliveryMethodFilter, setDeliveryMethodFilter] = useState<"all" | "self-pickup" | "delivery">("all");
+  const [driverFilter, setDriverFilter] = useState<string>("all");
   const [sort, setSort] = useState<"updated" | "name">("updated"), [filtersOpen, setFiltersOpen] = useState(false);
   const [editing, setEditing] = useState<RecordItem | "new" | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
   const [addressEdit, setAddressEdit] = useState<{ recordId: string; address?: Address } | null>(null);
@@ -113,9 +114,14 @@ export function RecordsPanel({ records, drivers, groups = [], isAdmin = false, s
         deliveryMethodFilter === "all" ||
         (deliveryMethodFilter === "self-pickup" && isSelfPickup) ||
         (deliveryMethodFilter === "delivery" && !isSelfPickup);
-      return matchesQuery && matchesArea && matchesStatus && matchesGroup && matchesAddress && matchesDeliveryMethod;
+      const matchesDriver =
+        driverFilter === "all" ||
+        (driverFilter === "unassigned" && (!record.driverId || record.driverId === "")) ||
+        (driverFilter === "self-pickup" && isSelfPickup) ||
+        record.driverId === driverFilter;
+      return matchesQuery && matchesArea && matchesStatus && matchesGroup && matchesAddress && matchesDeliveryMethod && matchesDriver;
     }).sort((left, right) => sort === "name" ? left.name.localeCompare(right.name) : right.updatedAt - left.updatedAt);
-  }, [addressFilter, area, deliveryMethodFilter, groupFilter, query, records, sort, status]);
+  }, [addressFilter, area, deliveryMethodFilter, driverFilter, groupFilter, query, records, sort, status]);
 
   const removeRecord = async (record: RecordItem) => {
     if (!window.confirm(`Delete ${record.name}? This can be recovered from the D1 database if needed.`)) return;
@@ -232,12 +238,27 @@ export function RecordsPanel({ records, drivers, groups = [], isAdmin = false, s
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, phone, address, group…" />
       </label>
       <button className={`button filter-button ${filtersOpen ? "active" : ""}`} onClick={() => setFiltersOpen(!filtersOpen)}>
-        <SlidersHorizontal size={17} />Filters{(status !== "all" || groupFilter !== "all" || addressFilter !== "all" || deliveryMethodFilter !== "all") && <span className="filter-dot" />}
+        <SlidersHorizontal size={17} />Filters{(status !== "all" || groupFilter !== "all" || addressFilter !== "all" || deliveryMethodFilter !== "all" || driverFilter !== "all") && <span className="filter-dot" />}
       </button>
       <button className="button filter-button" onClick={() => setSort(sort === "updated" ? "name" : "updated")}>
         <ArrowDownAZ size={17} />{sort === "updated" ? "Recent" : "Name"}
       </button>
       {filtersOpen && <div className="filter-row">
+        <label>Delivery Person
+          <select value={driverFilter} onChange={(event) => setDriverFilter(event.target.value)}>
+            <option value="all">All delivery persons ({records.length})</option>
+            <option value="unassigned">⚠️ Unassigned ({records.filter((r) => !r.driverId).length})</option>
+            <option value="self-pickup">🚶 Self Pick Up ({selfPickupCount})</option>
+            {drivers.filter((d) => d.active).map((driver) => {
+              const count = records.filter((r) => r.driverId === driver.id).length;
+              return (
+                <option key={driver.id} value={driver.id}>
+                  🛵 {driver.name}{driver.vehicle ? ` (${driver.vehicle})` : ""}{driver.area ? ` · ${driver.area}` : ""} ({count})
+                </option>
+              );
+            })}
+          </select>
+        </label>
         <label>Delivery Method
           <select value={deliveryMethodFilter} onChange={(event) => setDeliveryMethodFilter(event.target.value as "all" | "self-pickup" | "delivery")}>
             <option value="all">All methods ({records.length})</option>
@@ -271,14 +292,14 @@ export function RecordsPanel({ records, drivers, groups = [], isAdmin = false, s
             })}
           </select>
         </label>
-        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); setDeliveryMethodFilter("all"); }}>Clear filters</button>
+        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); setDeliveryMethodFilter("all"); setDriverFilter("all"); }}>Clear filters</button>
       </div>}
     </section>
 
     <div className="list-meta">
       <span>{filtered.length} shown ({filtered.reduce((sum, item) => sum + item.portions, 0)} portions)</span>
-      {(query || area !== "all" || status !== "all" || groupFilter !== "all" || addressFilter !== "all" || deliveryMethodFilter !== "all") && (
-        <button className="text-button" onClick={() => { setQuery(""); setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); setDeliveryMethodFilter("all"); }}>
+      {(query || area !== "all" || status !== "all" || groupFilter !== "all" || addressFilter !== "all" || deliveryMethodFilter !== "all" || driverFilter !== "all") && (
+        <button className="text-button" onClick={() => { setQuery(""); setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); setDeliveryMethodFilter("all"); setDriverFilter("all"); }}>
           Reset filters
         </button>
       )}

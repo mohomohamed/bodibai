@@ -138,7 +138,7 @@ a { color: inherit; text-decoration: none; }
 .search-box input { width: 100%; border: 0; outline: 0; color: var(--ink); background: transparent; }
 .filter-button { position: relative; }
 .filter-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #e28d3e; }
-.filter-row { flex-basis: 100%; display: flex; align-items: end; gap: 12px; padding: 12px 5px 3px; border-top: 1px solid var(--line); }
+.filter-row { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 12px 5px 3px; border-top: 1px solid var(--line); }
 .toolbar:has(.filter-row) { flex-wrap: wrap; }
 .filter-row label { display: grid; gap: 5px; color: var(--muted); font-size: .72rem; font-weight: 700; }
 .filter-row select { min-width: 170px; height: 39px; padding: 0 34px 0 10px; border: 1px solid var(--line); border-radius: 9px; background: white; }
