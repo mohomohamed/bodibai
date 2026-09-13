@@ -279,6 +279,7 @@ export function RecordsPanel({ records, drivers, groups = [], isAdmin = false, s
             <option value="planned">Planned</option>
             <option value="prepared">Prepared</option>
             <option value="out-for-delivery">Out for delivery</option>
+            <option value="not-picking-up">Not picking up 📵</option>
             <option value="delivered">Delivered</option>
             <option value="paused">Paused</option>
           </select>
@@ -340,7 +341,7 @@ export function RecordsPanel({ records, drivers, groups = [], isAdmin = false, s
                         status: record.status,
                         notes: record.notes,
                       }, true);
-                      notify(`Status updated to ${e.target.value}`);
+                      notify(e.target.value === "not-picking-up" ? `📵 Marked ${record.name} as Not Picking Up` : `Status updated to ${e.target.value}`);
                     }}
                     className={`card-status-select status-${record.deliveryStatus}`}
                     aria-label="Change status"
@@ -348,6 +349,7 @@ export function RecordsPanel({ records, drivers, groups = [], isAdmin = false, s
                     <option value="planned">Planned ⏳</option>
                     <option value="prepared">Prepared 📦</option>
                     <option value="out-for-delivery">Out 🛵</option>
+                    <option value="not-picking-up">No Answer 📵</option>
                     <option value="delivered">Delivered ✅</option>
                     <option value="paused">Hold ⏸️</option>
                   </select>

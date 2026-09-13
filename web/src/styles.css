@@ -155,6 +155,7 @@ a { color: inherit; text-decoration: none; }
 .status-chip { display: inline-flex; align-items: center; width: fit-content; padding: 4px 8px; border-radius: 999px; color: #48625a; background: #edf4f1; font-size: .64rem; font-weight: 700; text-transform: capitalize; white-space: nowrap; }
 .status-delivered { color: #21694e; background: #ddf4e8; }
 .status-out-for-delivery { color: #78571a; background: #fff1c9; }
+.status-not-picking-up { color: #c2410c; background: #ffedd5; }
 .status-paused { color: #7b5555; background: #f5eaea; }
 .record-contact { display: flex; flex-wrap: wrap; gap: 6px 17px; color: #5c6b66; font-size: .8rem; }
 .record-contact span { min-width: 0; display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -835,6 +836,11 @@ a { color: inherit; text-decoration: none; }
   color: #92400e;
   border-color: #fde68a;
 }
+.card-status-select.status-not-picking-up {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fdba74;
+}
 .card-status-select.status-delivered {
   background: #ddf4e8;
   color: #21694e;
@@ -1312,6 +1318,12 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
   outline: none;
 }
+.stop-status-select.status-planned { background: #fff8e6; color: #8d5b00; border-color: #ffe8a3; }
+.stop-status-select.status-prepared { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+.stop-status-select.status-out-for-delivery { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.stop-status-select.status-not-picking-up { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
+.stop-status-select.status-delivered { background: #ddf4e8; color: #21694e; border-color: #bbf0d6; }
+.stop-status-select.status-paused { background: #fbebee; color: #9f1239; border-color: #fecdd3; }
 
 .unassigned-section {
   padding: 18px 20px;
@@ -1444,6 +1456,8 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1;
 }
 .driver-avatar-badge {
   width: 44px;
@@ -1459,12 +1473,16 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 .driver-name-row h1 {
   font-size: 1.22rem;
   font-weight: 800;
   color: var(--ink);
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .driver-role-chip {
   font-size: 0.68rem;
@@ -1478,6 +1496,9 @@ a { color: inherit; text-decoration: none; }
   font-size: 0.78rem;
   color: var(--ink-muted);
   margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .driver-top-actions {
   display: flex;
@@ -1525,6 +1546,8 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
   color: var(--ink-muted);
   margin-top: 2px;
+  text-align: center;
+  line-height: 1.2;
 }
 .route-progress-track {
   width: 100%;
@@ -1584,9 +1607,17 @@ a { color: inherit; text-decoration: none; }
   padding: 4px;
   border-radius: 14px;
   background: #e2e8f0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+.driver-tabs-bar::-webkit-scrollbar {
+  display: none;
 }
 .driver-nav-tab {
   flex: 1;
+  min-width: max-content;
   height: 38px;
   display: flex;
   align-items: center;
@@ -1600,6 +1631,9 @@ a { color: inherit; text-decoration: none; }
   background: transparent;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 0 12px;
 }
 .driver-nav-tab.active {
   background: white;
@@ -1688,9 +1722,13 @@ a { color: inherit; text-decoration: none; }
   border-color: #a7f3d0;
   background: #fcfdfc;
 }
+.driver-stop-card.is-not-picking-up {
+  border-color: #fdba74;
+  background: #fffcf8;
+}
 .stop-card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
 }
@@ -1699,6 +1737,7 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+  flex: 1;
 }
 .stop-number {
   font-size: 0.8rem;
@@ -1724,6 +1763,10 @@ a { color: inherit; text-decoration: none; }
   border-radius: 5px;
   background: #f1f5f9;
   color: #475569;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .stop-reorder-actions {
   display: flex;
@@ -1748,6 +1791,8 @@ a { color: inherit; text-decoration: none; }
   color: var(--ink);
   margin: 0;
   line-height: 1.3;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .stop-address-row {
   display: flex;
@@ -1764,6 +1809,8 @@ a { color: inherit; text-decoration: none; }
 .stop-address-text {
   flex: 1;
   font-weight: 500;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .copy-icon-btn {
   width: 24px;
@@ -1780,6 +1827,20 @@ a { color: inherit; text-decoration: none; }
   border-radius: 8px;
   border: 1px solid #fef08a;
   margin: 2px 0 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.not-picking-up-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #c2410c;
+  background: #ffedd5;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #fed7aa;
 }
 
 /* 1-Tap Action Buttons Grid */
@@ -1872,6 +1933,30 @@ a { color: inherit; text-decoration: none; }
   background: #e2e8f0;
   color: #475569;
   border: 1px solid #cbd5e1;
+}
+.not-picking-up-btn {
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 11px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff7ed;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.not-picking-up-btn:hover {
+  background: #ffedd5;
+  border-color: #f97316;
+}
+.not-picking-up-btn.is-active {
+  background: #ea580c;
+  color: white;
+  border-color: #c2410c;
 }
 .release-stop-btn {
   height: 42px;
@@ -2191,8 +2276,17 @@ a { color: inherit; text-decoration: none; }
   .section-title { align-items: flex-start; }
   .drivers-card, .import-section { padding: 16px; }
   .driver-portal { padding: 12px 10px calc(90px + env(safe-area-inset-bottom)); gap: 12px; }
+  .admin-preview-banner { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .admin-preview-banner .button { align-self: flex-end; }
   .driver-action-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .driver-action-btn { min-height: 42px; font-size: 0.82rem; white-space: nowrap; }
   .driver-route-launch-buttons { flex-direction: column; }
+  .claim-actions-row { display: flex; width: 100%; gap: 8px; }
+  .claim-actions-row .button { flex: 1; min-height: 42px; justify-content: center; }
+  .stop-footer-toggle { flex-wrap: wrap; gap: 8px; }
+  .stop-delivered-toggle { flex-basis: 100%; min-height: 44px; }
+  .not-picking-up-btn { flex: 1; justify-content: center; min-height: 40px; }
+  .release-stop-btn { flex: 1; justify-content: center; min-height: 40px; }
 }
 
 

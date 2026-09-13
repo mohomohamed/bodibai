@@ -412,6 +412,7 @@ export function DispatchPanel({
                             <option value="planned">Planned ⏳</option>
                             <option value="prepared">Prepared 📦</option>
                             <option value="out-for-delivery">Out 🛵</option>
+                            <option value="not-picking-up">No Answer 📵</option>
                             <option value="delivered">Delivered ✅</option>
                             <option value="paused">Hold ⏸️</option>
                           </select>
@@ -515,6 +516,7 @@ export function DispatchPanel({
                       >
                         <option value="planned">Planned ⏳</option>
                         <option value="prepared">Ready 📦</option>
+                        <option value="not-picking-up">No Answer 📵</option>
                         <option value="delivered">Picked Up ✅</option>
                         <option value="paused">Hold ⏸️</option>
                       </select>

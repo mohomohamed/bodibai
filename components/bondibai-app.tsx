@@ -114,6 +114,7 @@ function normalizeStatus(value: string): RecipientStatus {
   const key = value.trim().toLowerCase().replace(/\s+/g, "-");
   if (key === "green" || key === "complete" || key === "done") return "delivered";
   if (key === "red" || key === "hold") return "on-hold";
+  if (key === "no-answer" || key === "unreachable" || key === "not-picking-up" || key === "not-answering") return "not-picking-up";
   return statuses.includes(key as RecipientStatus) ? key as RecipientStatus : "planned";
 }
 

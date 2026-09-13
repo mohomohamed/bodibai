@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Navigation,
   Phone,
+  PhoneOff,
   Plus,
   RefreshCw,
   Search,
@@ -186,6 +187,32 @@ export function DriverPortal({
       true,
     );
     notify(nextStatus === "delivered" ? `✅ Delivered to ${record.name}!` : `Marked ${record.name} as pending`);
+  };
+
+  const handleToggleNotPickingUp = async (record: RecordItem) => {
+    const nextStatus = record.deliveryStatus === "not-picking-up" ? "planned" : "not-picking-up";
+    await saveRecord(
+      {
+        id: record.id,
+        name: record.name,
+        phone: record.phone,
+        email: record.email,
+        category: record.category,
+        groupName: record.groupName,
+        area: record.area,
+        portions: record.portions,
+        deliveryStatus: nextStatus,
+        driverId: record.driverId,
+        status: record.status,
+        notes: record.notes,
+      },
+      true,
+    );
+    notify(
+      nextStatus === "not-picking-up"
+        ? `📵 Marked ${record.name} as Not Picking Up`
+        : `Reset status for ${record.name} to Pending`
+    );
   };
 
   const handleClaimRecord = async (record: RecordItem) => {
@@ -636,6 +663,7 @@ export function DriverPortal({
               const fullAddress = addressText(primary);
               const cleanPhone = cleanMaldivesPhone(record.phone);
               const isDone = record.deliveryStatus === "delivered";
+              const isNotPickingUp = record.deliveryStatus === "not-picking-up";
 
               // Clean WhatsApp arrival message WITHOUT mentioning portion counts
               const waMessage = `Assalaamu Alaikum! Bondibai delivery for ${record.name}. I am approaching your address at ${fullAddress}.\n\n✨ _Bondibai App_`;
@@ -646,7 +674,7 @@ export function DriverPortal({
               return (
                 <article
                   key={record.id}
-                  className={`driver-stop-card card ${isDone ? "is-delivered" : ""}`}
+                  className={`driver-stop-card card ${isDone ? "is-delivered" : isNotPickingUp ? "is-not-picking-up" : ""}`}
                 >
                   {/* Card Header & Sequencing */}
                   <div className="stop-card-header">
@@ -712,6 +740,12 @@ export function DriverPortal({
                         <strong>Note:</strong> {record.notes}
                       </p>
                     )}
+                    {isNotPickingUp && (
+                      <div className="not-picking-up-banner">
+                        <PhoneOff size={14} />
+                        <span>Recipient not picking up call · Retrying contact</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* 1-Tap Action Buttons Grid */}
@@ -724,7 +758,7 @@ export function DriverPortal({
                         title={`Call ${record.name} at ${record.phone}`}
                       >
                         <Phone size={17} />
-                        <span>Call Customer</span>
+                        <span>Call</span>
                       </a>
                     ) : (
                       <button
@@ -793,7 +827,7 @@ export function DriverPortal({
                     </button>
                   </div>
 
-                  {/* 1-Tap Delivery Status Confirmation & Release Option */}
+                  {/* 1-Tap Delivery Status Confirmation, No Answer & Release Option */}
                   <div className="stop-footer-toggle">
                     <button
                       type="button"
@@ -813,15 +847,26 @@ export function DriverPortal({
                       )}
                     </button>
                     {!isDone && (
-                      <button
-                        type="button"
-                        className="button secondary ghost compact release-stop-btn"
-                        onClick={() => void handleReleaseRecord(record)}
-                        title="Release this stop back to available stops"
-                      >
-                        <UserMinus size={14} />
-                        <span>Release</span>
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className={`not-picking-up-btn ${isNotPickingUp ? "is-active" : ""}`}
+                          onClick={() => void handleToggleNotPickingUp(record)}
+                          title={isNotPickingUp ? "Reset call status to planned" : "Mark as Not Picking Up"}
+                        >
+                          <PhoneOff size={14} />
+                          <span>{isNotPickingUp ? "No Answer 📵" : "No Answer"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary ghost compact release-stop-btn"
+                          onClick={() => void handleReleaseRecord(record)}
+                          title="Release this stop back to available stops"
+                        >
+                          <UserMinus size={14} />
+                          <span>Release</span>
+                        </button>
+                      </>
                     )}
                   </div>
                 </article>

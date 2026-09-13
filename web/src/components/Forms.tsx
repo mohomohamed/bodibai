@@ -156,6 +156,7 @@ export function RecordForm({ record, drivers, groups = [], onSave, onCancel }: {
             <option value="planned">Planned</option>
             <option value="prepared">Prepared</option>
             <option value="out-for-delivery">Out for delivery</option>
+            <option value="not-picking-up">Not picking up (No Answer)</option>
             <option value="delivered">Delivered</option>
             <option value="paused">Paused</option>
           </select>

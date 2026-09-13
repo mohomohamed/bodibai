@@ -32,7 +32,7 @@ export const AREA_META: Record<RecipientArea, { label: string; tone: string; dot
   },
 };
 
-export type RecipientStatus = "planned" | "packed" | "delivered" | "on-hold";
+export type RecipientStatus = "planned" | "packed" | "delivered" | "on-hold" | "not-picking-up";
 
 export type Recipient = {
   id: string;
@@ -302,6 +302,7 @@ export const INITIAL_RECIPIENTS: Recipient[] = mergeDuplicateRecipients(unmerged
 export const STATUS_META: Record<RecipientStatus, { label: string; tone: string }> = {
   planned: { label: "Planned", tone: "bg-slate-100 text-slate-700 border-slate-200" },
   packed: { label: "Packed", tone: "bg-amber-50 text-amber-800 border-amber-200" },
+  "not-picking-up": { label: "Not Picking Up", tone: "bg-orange-50 text-orange-800 border-orange-200" },
   delivered: { label: "Delivered", tone: "bg-emerald-50 text-emerald-800 border-emerald-200" },
   "on-hold": { label: "On hold", tone: "bg-rose-50 text-rose-800 border-rose-200" },
 };
