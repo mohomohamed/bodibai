@@ -45,6 +45,7 @@ interface Props {
 export function RecordsPanel({ records, drivers, groups = [], saveRecord, deleteRecord, saveAddress, deleteAddress, notify }: Props) {
   const [query, setQuery] = useState(""), [area, setArea] = useState("all"), [status, setStatus] = useState("all"), [groupFilter, setGroupFilter] = useState("all");
   const [addressFilter, setAddressFilter] = useState<"all" | "missing" | "assigned">("all");
+  const [deliveryMethodFilter, setDeliveryMethodFilter] = useState<"all" | "self-pickup" | "delivery">("all");
   const [sort, setSort] = useState<"updated" | "name">("updated"), [filtersOpen, setFiltersOpen] = useState(false);
   const [editing, setEditing] = useState<RecordItem | "new" | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
   const [addressEdit, setAddressEdit] = useState<{ recordId: string; address?: Address } | null>(null);
@@ -70,9 +71,14 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
         addressFilter === "all" ||
         (addressFilter === "missing" && !hasRecordAddress(record)) ||
         (addressFilter === "assigned" && hasRecordAddress(record));
-      return matchesQuery && matchesArea && matchesStatus && matchesGroup && matchesAddress;
+      const isSelfPickup = record.driverId === "self-pickup" || record.driverId === "pickup";
+      const matchesDeliveryMethod =
+        deliveryMethodFilter === "all" ||
+        (deliveryMethodFilter === "self-pickup" && isSelfPickup) ||
+        (deliveryMethodFilter === "delivery" && !isSelfPickup);
+      return matchesQuery && matchesArea && matchesStatus && matchesGroup && matchesAddress && matchesDeliveryMethod;
     }).sort((left, right) => sort === "name" ? left.name.localeCompare(right.name) : right.updatedAt - left.updatedAt);
-  }, [addressFilter, area, groupFilter, query, records, sort, status]);
+  }, [addressFilter, area, deliveryMethodFilter, groupFilter, query, records, sort, status]);
 
   const removeRecord = async (record: RecordItem) => {
     if (!window.confirm(`Delete ${record.name}? This can be recovered from the D1 database if needed.`)) return;
@@ -116,6 +122,7 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
 
   const noAddressCount = useMemo(() => records.filter((r) => !hasRecordAddress(r)).length, [records]);
   const hasAddressCount = records.length - noAddressCount;
+  const selfPickupCount = useMemo(() => records.filter((r) => r.driverId === "self-pickup" || r.driverId === "pickup").length, [records]);
 
   return <>
     <div className="page-heading records-heading">
@@ -126,8 +133,8 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
     <div className="island-pill-bar">
       <button
         type="button"
-        className={`island-pill ${area === "all" && addressFilter === "all" ? "active" : ""}`}
-        onClick={() => { setArea("all"); setAddressFilter("all"); }}
+        className={`island-pill ${area === "all" && addressFilter === "all" && deliveryMethodFilter === "all" ? "active" : ""}`}
+        onClick={() => { setArea("all"); setAddressFilter("all"); setDeliveryMethodFilter("all"); }}
       >
         <span>All</span>
         <span className="pill-count">{records.length}</span>
@@ -161,6 +168,16 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
       </button>
       <button
         type="button"
+        className={`island-pill pill-self-pickup ${deliveryMethodFilter === "self-pickup" ? "active" : ""}`}
+        onClick={() => setDeliveryMethodFilter(deliveryMethodFilter === "self-pickup" ? "all" : "self-pickup")}
+        title="Filter households picking up in person"
+      >
+        <span className="pill-dot purple-dot" />
+        <span>Self Pick Up</span>
+        <span className="pill-count">{selfPickupCount}</span>
+      </button>
+      <button
+        type="button"
         className={`island-pill pill-missing-address ${addressFilter === "missing" ? "active" : ""}`}
         onClick={() => setAddressFilter(addressFilter === "missing" ? "all" : "missing")}
         title="Filter households with no address assigned"
@@ -178,12 +195,19 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, phone, address, group…" />
       </label>
       <button className={`button filter-button ${filtersOpen ? "active" : ""}`} onClick={() => setFiltersOpen(!filtersOpen)}>
-        <SlidersHorizontal size={17} />Filters{(status !== "all" || groupFilter !== "all" || addressFilter !== "all") && <span className="filter-dot" />}
+        <SlidersHorizontal size={17} />Filters{(status !== "all" || groupFilter !== "all" || addressFilter !== "all" || deliveryMethodFilter !== "all") && <span className="filter-dot" />}
       </button>
       <button className="button filter-button" onClick={() => setSort(sort === "updated" ? "name" : "updated")}>
         <ArrowDownAZ size={17} />{sort === "updated" ? "Recent" : "Name"}
       </button>
       {filtersOpen && <div className="filter-row">
+        <label>Delivery Method
+          <select value={deliveryMethodFilter} onChange={(event) => setDeliveryMethodFilter(event.target.value as "all" | "self-pickup" | "delivery")}>
+            <option value="all">All methods ({records.length})</option>
+            <option value="delivery">🛵 Road Delivery ({records.length - selfPickupCount})</option>
+            <option value="self-pickup">🚶 Self Pick Up ({selfPickupCount})</option>
+          </select>
+        </label>
         <label>Address Status
           <select value={addressFilter} onChange={(event) => setAddressFilter(event.target.value as "all" | "missing" | "assigned")}>
             <option value="all">All records ({records.length})</option>
@@ -210,14 +234,14 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
             })}
           </select>
         </label>
-        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); }}>Clear filters</button>
+        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); setDeliveryMethodFilter("all"); }}>Clear filters</button>
       </div>}
     </section>
 
     <div className="list-meta">
       <span>{filtered.length} shown ({filtered.reduce((sum, item) => sum + item.portions, 0)} portions)</span>
-      {(query || area !== "all" || status !== "all" || groupFilter !== "all" || addressFilter !== "all") && (
-        <button className="text-button" onClick={() => { setQuery(""); setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); }}>
+      {(query || area !== "all" || status !== "all" || groupFilter !== "all" || addressFilter !== "all" || deliveryMethodFilter !== "all") && (
+        <button className="text-button" onClick={() => { setQuery(""); setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); setDeliveryMethodFilter("all"); }}>
           Reset filters
         </button>
       )}
@@ -347,7 +371,11 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
               <div className="record-footer">
                 <span className="portion-count-badge">{record.portions} portion{record.portions === 1 ? "" : "s"}</span>
                 {record.area && <span className={`area-tag tag-${record.area}`}>{record.area}</span>}
-                {driver && <span className="driver-assigned-tag">🛵 {driver.name}</span>}
+                {record.driverId === "self-pickup" || record.driverId === "pickup" ? (
+                  <span className="driver-assigned-tag tag-self-pickup">🚶 Self Pick Up</span>
+                ) : driver ? (
+                  <span className="driver-assigned-tag">🛵 {driver.name}</span>
+                ) : null}
                 <span className="updated">Updated {relativeTime(record.updatedAt)}{record.updatedBy ? ` by ${record.updatedBy}` : ""}</span>
               </div>
             </div>
@@ -386,7 +414,7 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
         <div><dt>Phone</dt><dd>{selected.phone || "—"}</dd></div>
         <div><dt>Email</dt><dd>{selected.email || "—"}</dd></div>
         <div><dt>Portions</dt><dd>{selected.portions}</dd></div>
-        <div><dt>Assigned Driver</dt><dd>{drivers.find((item) => item.id === selected.driverId)?.name || "Unassigned"}</dd></div>
+        <div><dt>Delivery Method / Driver</dt><dd>{selected.driverId === "self-pickup" || selected.driverId === "pickup" ? "🚶 Self Pick Up (Direct Collection)" : (drivers.find((item) => item.id === selected.driverId)?.name || "Unassigned")}</dd></div>
         <div><dt>Group</dt><dd>{selected.groupName || "—"}</dd></div>
         <div><dt>Area</dt><dd>{selected.area || "—"}</dd></div>
       </dl>

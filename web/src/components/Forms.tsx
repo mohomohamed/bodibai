@@ -161,12 +161,13 @@ export function RecordForm({ record, drivers, groups = [], onSave, onCancel }: {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="record-driver">Assigned Driver</label>
+          <label htmlFor="record-driver">Delivery Method / Driver</label>
           <select id="record-driver" name="driverId" defaultValue={record?.driverId || ""}>
-            <option value="">Unassigned</option>
+            <option value="">Unassigned (Needs Driver)</option>
+            <option value="self-pickup">🚶 Self Pick Up (Direct Collection)</option>
             {drivers.filter((driver) => driver.active).map((driver) => (
               <option key={driver.id} value={driver.id}>
-                {driver.name}{driver.vehicle ? ` (${driver.vehicle})` : ""}{driver.area ? ` · ${driver.area}` : ""}
+                🛵 {driver.name}{driver.vehicle ? ` (${driver.vehicle})` : ""}{driver.area ? ` · ${driver.area}` : ""}
               </option>
             ))}
           </select>

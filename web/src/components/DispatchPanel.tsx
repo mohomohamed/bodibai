@@ -15,6 +15,7 @@ import {
   Phone,
   Plus,
   Send,
+  ShoppingBag,
   Trash2,
   Truck,
   UserCheck,
@@ -66,7 +67,7 @@ export function DispatchPanel({
   notify: (message: string) => void;
 }) {
   const [editingDriver, setEditingDriver] = useState<Driver | "new" | null>(null);
-  const [selectedDriverId, setSelectedDriverId] = useState<string | "all" | "unassigned">("all");
+  const [selectedDriverId, setSelectedDriverId] = useState<string | "all" | "unassigned" | "self-pickup">("all");
   const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
 
   // Metrics
@@ -77,20 +78,23 @@ export function DispatchPanel({
   const pendingPortions = totalPortions - deliveredPortions;
   const progressPercent = totalPortions > 0 ? Math.round((deliveredPortions / totalPortions) * 100) : 0;
 
-  // Group records by driver
+  // Group records by driver and self pickup
   const recordsByDriver = useMemo(() => {
     const map = new Map<string, RecordItem[]>();
     for (const d of drivers) map.set(d.id, []);
     const unassigned: RecordItem[] = [];
+    const selfPickup: RecordItem[] = [];
 
     for (const r of records) {
-      if (r.driverId && map.has(r.driverId)) {
+      if (r.driverId === "self-pickup" || r.driverId === "pickup") {
+        selfPickup.push(r);
+      } else if (r.driverId && map.has(r.driverId)) {
         map.get(r.driverId)!.push(r);
       } else {
         unassigned.push(r);
       }
     }
-    return { assigned: map, unassigned };
+    return { assigned: map, unassigned, selfPickup };
   }, [drivers, records]);
 
   // Quick driver assignment
@@ -109,7 +113,7 @@ export function DispatchPanel({
       status: record.status,
       notes: record.notes,
     }, true);
-    notify(driverId ? "Driver assigned" : "Household unassigned");
+    notify(driverId === "self-pickup" ? "Assigned to Self Pick Up 🚶" : driverId ? "Driver assigned 🛵" : "Household unassigned");
   };
 
   // Quick status update
@@ -129,6 +133,17 @@ export function DispatchPanel({
       notes: record.notes,
     }, true);
     notify(`Status updated to ${newStatus}`);
+  };
+
+  // Send WhatsApp notification that Bondibai is ready for collection
+  const sendWhatsAppPickupReady = (record: RecordItem) => {
+    const cleanPhone = cleanMaldivesPhone(record.phone);
+    const message = `Assalaamu Alaikum ${record.name}! 🍲✨\n\nYour Bondibai order is packed and ready for collection at our distribution counter.\n\n✨ _Bondibai App_`;
+    const waUrl = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    notify(`Opening collection notice for ${record.name}`);
   };
 
   // Build WhatsApp Dispatch Route text
@@ -232,6 +247,15 @@ export function DispatchPanel({
             </button>
           );
         })}
+        {recordsByDriver.selfPickup.length > 0 && (
+          <button
+            type="button"
+            className={`driver-tab self-pickup-tab ${selectedDriverId === "self-pickup" ? "active" : ""}`}
+            onClick={() => setSelectedDriverId("self-pickup")}
+          >
+            🚶 Self Pick Up ({recordsByDriver.selfPickup.length})
+          </button>
+        )}
         {recordsByDriver.unassigned.length > 0 && (
           <button
             type="button"
@@ -402,6 +426,105 @@ export function DispatchPanel({
               </article>
             );
           })}
+
+        {/* Self Pick Up Card */}
+        {(selectedDriverId === "all" || selectedDriverId === "self-pickup") && recordsByDriver.selfPickup.length > 0 && (
+          <article className="card driver-card self-pickup-card">
+            <div className="driver-card-header">
+              <div className="driver-avatar-circle self-pickup-avatar">
+                <ShoppingBag size={20} />
+              </div>
+              <div className="driver-info-main">
+                <div className="driver-title-row">
+                  <h2>Self Pick Up (Direct Collection)</h2>
+                  <span className="vehicle-badge self-pickup-badge">🚶 In-Person Collection</span>
+                </div>
+                <p className="driver-meta">
+                  Kitchen / Counter Collection · {recordsByDriver.selfPickup.length} households · {recordsByDriver.selfPickup.reduce((sum, r) => sum + (r.portions || 1), 0)} portions
+                </p>
+              </div>
+            </div>
+
+            {/* Collection Progress */}
+            {(() => {
+              const total = recordsByDriver.selfPickup.reduce((sum, r) => sum + (r.portions || 1), 0);
+              const done = recordsByDriver.selfPickup
+                .filter((r) => r.deliveryStatus === "delivered")
+                .reduce((sum, r) => sum + (r.portions || 1), 0);
+              const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+              return (
+                <div className="driver-progress-section">
+                  <div className="progress-label-row">
+                    <span>Collection Progress</span>
+                    <span className="percent-num">{percent}% ({done}/{total} portions)</span>
+                  </div>
+                  <div className="progress-track">
+                    <div className="progress-fill self-pickup-progress-fill" style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Self Pick Up Stop List */}
+            <div className="driver-stop-list">
+              {recordsByDriver.selfPickup.map((record, i) => {
+                const primary = record.addresses.find((a) => a.isPrimary) || record.addresses[0];
+                const cleanPhone = cleanMaldivesPhone(record.phone);
+                const isDone = record.deliveryStatus === "delivered";
+
+                return (
+                  <div className={`stop-item ${isDone ? "stop-done" : ""}`} key={record.id}>
+                    <span className="stop-index">{i + 1}</span>
+                    <div className="stop-info">
+                      <div className="stop-name-row">
+                        <strong>{record.name}</strong>
+                        <span className="stop-portion-tag">{record.portions} portion{record.portions === 1 ? "" : "s"}</span>
+                        {record.area && <span className="stop-area-tag">{record.area}</span>}
+                      </div>
+                      <p className="stop-address">
+                        <MapPin size={12} /> {addressText(primary)}
+                      </p>
+                      {record.notes && <span className="stop-notes">📝 {record.notes}</span>}
+                    </div>
+
+                    <div className="stop-actions">
+                      {cleanPhone && (
+                        <>
+                          <a
+                            href={`tel:${record.phone}`}
+                            className="icon-action-btn phone-btn"
+                            title={`Call ${record.name}`}
+                          >
+                            <Phone size={14} />
+                          </a>
+                          <button
+                            type="button"
+                            className="icon-action-btn wa-pickup-btn"
+                            onClick={() => sendWhatsAppPickupReady(record)}
+                            title="Send WhatsApp collection ready notice"
+                          >
+                            <MessageSquare size={14} />
+                          </button>
+                        </>
+                      )}
+                      <select
+                        value={record.deliveryStatus}
+                        onChange={(e) => void handleUpdateStatus(record, e.target.value)}
+                        className={`stop-status-select status-${record.deliveryStatus}`}
+                        aria-label="Collection status"
+                      >
+                        <option value="planned">Planned ⏳</option>
+                        <option value="prepared">Ready 📦</option>
+                        <option value="delivered">Picked Up ✅</option>
+                        <option value="paused">Hold ⏸️</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+        )}
       </section>
 
       {/* Unassigned Households Panel */}
@@ -410,7 +533,7 @@ export function DispatchPanel({
           <div className="section-title">
             <div>
               <h2>⚠️ Unassigned Households ({recordsByDriver.unassigned.length})</h2>
-              <p>Assign drivers to these households for distribution.</p>
+              <p>Assign drivers or mark for self pick up.</p>
             </div>
           </div>
           <div className="unassigned-grid">
@@ -436,13 +559,16 @@ export function DispatchPanel({
                       aria-label="Assign driver"
                     >
                       <option value="" disabled>
-                        + Assign Driver…
+                        + Assign Driver / Method…
+                      </option>
+                      <option value="self-pickup">
+                        🚶 Self Pick Up (Direct Collection)
                       </option>
                       {drivers
                         .filter((d) => d.active)
                         .map((d) => (
                           <option key={d.id} value={d.id}>
-                            {d.name} ({d.vehicle || "Motorcycle"})
+                            🛵 {d.name} ({d.vehicle || "Motorcycle"})
                           </option>
                         ))}
                     </select>

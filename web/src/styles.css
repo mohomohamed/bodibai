@@ -712,7 +712,23 @@ a { color: inherit; text-decoration: none; }
 .red-dot { background: #e11d48; }
 .cyan-dot { background: #0891b2; }
 .green-dot { background: #059669; }
+.purple-dot { background: #8b5cf6; }
 .warning-dot { background: #ea580c; }
+
+.pill-self-pickup:hover {
+  border-color: #a78bfa;
+  background: #f5f3ff;
+}
+.pill-self-pickup.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: white;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+.pill-self-pickup.active .pill-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
 
 .pill-missing-address:hover {
   border-color: #fb923c;
@@ -893,6 +909,11 @@ a { color: inherit; text-decoration: none; }
   font-size: 0.7rem;
   font-weight: 700;
 }
+.tag-self-pickup {
+  background: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
 
 /* Dispatch Panel & Routes */
 .dispatch-panel {
@@ -976,6 +997,17 @@ a { color: inherit; text-decoration: none; }
   border-color: #b45309;
   color: white;
 }
+.self-pickup-tab {
+  color: #6d28d9;
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+}
+.self-pickup-tab.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: white;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
 
 .driver-routes-grid {
   display: grid;
@@ -985,6 +1017,10 @@ a { color: inherit; text-decoration: none; }
   display: grid;
   gap: 14px;
   padding: 18px 20px;
+}
+.self-pickup-card {
+  border-color: #c4b5fd;
+  background: #fcfbfe;
 }
 .driver-card-header {
   display: flex;
@@ -1000,6 +1036,10 @@ a { color: inherit; text-decoration: none; }
   background: #e8f5ee;
   color: var(--green-700);
   flex-shrink: 0;
+}
+.self-pickup-avatar {
+  background: #ede9fe;
+  color: #7c3aed;
 }
 .driver-info-main {
   flex: 1;
@@ -1024,6 +1064,11 @@ a { color: inherit; text-decoration: none; }
 .vehicle-badge {
   background: #eef2ff;
   color: #4338ca;
+}
+.self-pickup-badge {
+  background: #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
 }
 .zone-badge {
   background: #ecfdf5;
@@ -1088,6 +1133,9 @@ a { color: inherit; text-decoration: none; }
   background: #10b981;
   border-radius: 999px;
   transition: width 0.3s ease;
+}
+.self-pickup-progress-fill {
+  background: linear-gradient(90deg, #a78bfa, #7c3aed);
 }
 
 .driver-stop-list {
@@ -1215,6 +1263,11 @@ a { color: inherit; text-decoration: none; }
   background: #e0f2fe;
   color: #0369a1;
   border-color: #7dd3fc;
+}
+.wa-pickup-btn:hover {
+  background: #ede9fe;
+  color: #6d28d9;
+  border-color: #c4b5fd;
 }
 .stop-status-select {
   height: 32px;
