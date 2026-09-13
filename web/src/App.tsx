@@ -1,8 +1,8 @@
-import { FileUp, List, LogOut, Menu, Settings, UserRound, X } from "lucide-react";
+import { List, LogOut, Menu, Settings, Truck, UserRound, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiClientError } from "./api";
 import { getSetting, removeSetting, saveSetting } from "./db";
-import { ImportPanel } from "./components/ImportPanel";
+import { DispatchPanel } from "./components/DispatchPanel";
 import { Login } from "./components/Login";
 import { RecordsPanel } from "./components/RecordsPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -10,7 +10,7 @@ import { SyncBadge } from "./components/SyncBadge";
 import { useSync } from "./useSync";
 
 interface SessionState { token: string; userName: string }
-type Page = "records" | "import" | "settings";
+type Page = "records" | "dispatch" | "settings";
 
 function LoadingScreen() {
   return <div className="loading-screen"><img src="/favicon.svg" alt="" /><p>Opening Bondibai…</p></div>;
@@ -33,7 +33,7 @@ function AuthenticatedApp({ session, endSession }: { session: SessionState; endS
     <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
       <nav aria-label="Primary navigation">
         <button className={page === "records" ? "active" : ""} onClick={() => navigate("records")}><List />Records</button>
-        <button className={page === "import" ? "active" : ""} onClick={() => navigate("import")}><FileUp />Import</button>
+        <button className={page === "dispatch" ? "active" : ""} onClick={() => navigate("dispatch")}><Truck />Dispatch</button>
         <button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}><Settings />Settings</button>
       </nav>
       <div className="sidebar-foot"><div className="privacy-note"><UserRound /><span><strong>Private workspace</strong><small>D1 master database</small></span></div><button onClick={() => void endSession(true)}><LogOut />Sign out</button></div>
@@ -43,13 +43,13 @@ function AuthenticatedApp({ session, endSession }: { session: SessionState; endS
       {sync.status === "offline" && <div className="offline-banner">You’re offline. Changes stay on this device and will sync automatically.{sync.pendingCount ? ` ${sync.pendingCount} waiting.` : ""}</div>}
       {sync.status === "issue" && <div className="offline-banner issue">Sync needs attention: {sync.syncError || "a pending change could not be sent."}</div>}
       {page === "records" && <RecordsPanel records={sync.records} drivers={sync.drivers} saveRecord={sync.saveRecord} deleteRecord={sync.deleteRecord} saveAddress={sync.saveAddress} deleteAddress={sync.deleteAddress} notify={notify} />}
-      {page === "import" && <ImportPanel onImport={sync.importRows} />}
-      {page === "settings" && <SettingsPanel token={session.token} userName={session.userName} drivers={sync.drivers} status={sync.status} pendingCount={sync.pendingCount} syncError={sync.syncError} onSync={sync.syncNow} onLogout={() => endSession(true)} onSaveDriver={sync.saveDriver} onDeleteDriver={sync.deleteDriver} notify={notify} />}
+      {page === "dispatch" && <DispatchPanel records={sync.records} drivers={sync.drivers} saveRecord={sync.saveRecord} saveDriver={sync.saveDriver} deleteDriver={sync.deleteDriver} notify={notify} />}
+      {page === "settings" && <SettingsPanel token={session.token} userName={session.userName} drivers={sync.drivers} status={sync.status} pendingCount={sync.pendingCount} syncError={sync.syncError} onSync={sync.syncNow} onLogout={() => endSession(true)} onSaveDriver={sync.saveDriver} onDeleteDriver={sync.deleteDriver} onImport={sync.importRows} notify={notify} />}
     </main>
     <nav className="mobile-nav" aria-label="Mobile navigation">
       <button className={page === "records" ? "active" : ""} onClick={() => navigate("records")}><List />Records</button>
-      <button className={page === "import" ? "active" : ""} onClick={() => navigate("import")}><FileUp />Import</button>
-      <button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}><Settings />More</button>
+      <button className={page === "dispatch" ? "active" : ""} onClick={() => navigate("dispatch")}><Truck />Dispatch</button>
+      <button className={page === "settings" ? "active" : ""} onClick={() => navigate("settings")}><Settings />Settings</button>
     </nav>
     {toast && <div className="toast" role="status">{toast}</div>}
   </div>;
