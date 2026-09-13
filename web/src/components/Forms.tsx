@@ -13,6 +13,7 @@ import {
   type RecordInput,
   type RecordItem,
 } from "../types";
+import { MapModal, type MapModalTarget } from "./MapModal";
 
 const input = (form: FormData, key: string) => String(form.get(key) || "").trim();
 
@@ -28,6 +29,7 @@ export function RecordForm({ record, drivers, onSave, onCancel }: {
   const [addressLine, setAddressLine] = useState(existingPrimary?.addressLine1 || "");
   const [area, setArea] = useState(record?.area || existingPrimary?.islandCity || "Malé");
   const [mapProvider, setMapProvider] = useState<MapProvider>(getPreferredMap());
+  const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
 
   const applyPreset = (prefix: string, island: string) => {
     setAddressLine((prev) => {
@@ -40,9 +42,12 @@ export function RecordForm({ record, drivers, onSave, onCancel }: {
   };
 
   const openMapSearch = () => {
-    const query = addressLine.trim() || area.trim() || record?.name || "Malé Maldives";
-    const url = MAP_PROVIDERS[mapProvider].getUrl(query);
-    window.open(url, "_blank", "noopener,noreferrer");
+    const query = addressLine.trim() || area.trim() || record?.name || "Malé";
+    setMapTarget({
+      title: record?.name || "New Household",
+      address: query,
+      area: area || "Malé",
+    });
   };
 
   const handleProviderChange = (provider: MapProvider) => {
@@ -205,6 +210,14 @@ export function RecordForm({ record, drivers, onSave, onCancel }: {
           {saving ? "Saving…" : record ? "Save changes" : "Add household record"}
         </button>
       </div>
+
+      {mapTarget && (
+        <MapModal
+          target={mapTarget}
+          onClose={() => setMapTarget(null)}
+          onSelectPreferredMap={handleProviderChange}
+        />
+      )}
     </form>
   );
 }
@@ -220,6 +233,7 @@ export function AddressForm({ recordId, address, onSave, onCancel }: {
   const [addressLine1, setAddressLine1] = useState(address?.addressLine1 || "");
   const [islandCity, setIslandCity] = useState(address?.islandCity || "Malé");
   const [mapProvider, setMapProvider] = useState<MapProvider>(getPreferredMap());
+  const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
 
   const applyPreset = (prefix: string, island: string) => {
     setAddressLine1((prev) => {
@@ -232,9 +246,12 @@ export function AddressForm({ recordId, address, onSave, onCancel }: {
   };
 
   const openMapSearch = () => {
-    const query = addressLine1.trim() || islandCity.trim() || "Malé Maldives";
-    const url = MAP_PROVIDERS[mapProvider].getUrl(query);
-    window.open(url, "_blank", "noopener,noreferrer");
+    const query = addressLine1.trim() || islandCity.trim() || "Malé";
+    setMapTarget({
+      title: address?.label || "Address Preview",
+      address: query,
+      area: islandCity || "Malé",
+    });
   };
 
   const handleProviderChange = (provider: MapProvider) => {
@@ -359,6 +376,14 @@ export function AddressForm({ recordId, address, onSave, onCancel }: {
           {saving ? "Saving…" : "Save address"}
         </button>
       </div>
+
+      {mapTarget && (
+        <MapModal
+          target={mapTarget}
+          onClose={() => setMapTarget(null)}
+          onSelectPreferredMap={handleProviderChange}
+        />
+      )}
     </form>
   );
 }

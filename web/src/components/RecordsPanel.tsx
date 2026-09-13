@@ -14,6 +14,7 @@ import {
   type RecordItem,
 } from "../types";
 import { AddressForm, RecordForm } from "./Forms";
+import { MapModal, type MapModalTarget } from "./MapModal";
 import { Modal } from "./Modal";
 
 function relativeTime(timestamp: number): string {
@@ -45,6 +46,7 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
   const [editing, setEditing] = useState<RecordItem | "new" | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
   const [addressEdit, setAddressEdit] = useState<{ recordId: string; address?: Address } | null>(null);
   const [mapProvider, setMapProvider] = useState<MapProvider>(getPreferredMap());
+  const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
 
   const selected = records.find((record) => record.id === selectedId);
   const areas = useMemo(() => [...new Set(records.map((record) => record.area).filter(Boolean))].sort(), [records]);
@@ -54,11 +56,9 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
     setPreferredMap(provider);
   };
 
-  const openInMap = (q: string, e?: React.MouseEvent, provider?: MapProvider) => {
+  const openMapModal = (target: MapModalTarget, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const targetProvider = provider || mapProvider;
-    const url = MAP_PROVIDERS[targetProvider].getUrl(q);
-    window.open(url, "_blank", "noopener,noreferrer");
+    setMapTarget(target);
   };
 
   const filtered = useMemo(() => {
@@ -246,8 +246,16 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
                     <button
                       type="button"
                       className="map-quick-link"
-                      title={`Open in ${MAP_PROVIDERS[mapProvider].label}`}
-                      onClick={(e) => openInMap(addressText(primary), e)}
+                      title={`Preview map for ${record.name}`}
+                      onClick={(e) => openMapModal({
+                        title: record.name,
+                        address: addressText(primary),
+                        area: record.area,
+                        phone: record.phone,
+                        portions: record.portions,
+                        status: record.deliveryStatus,
+                        notes: record.notes,
+                      }, e)}
                     >
                       <Compass size={13} /> {MAP_PROVIDERS[mapProvider].short}
                     </button>
@@ -374,14 +382,38 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
                 <p>{query}</p>
                 {address.notes && <small>{address.notes}</small>}
                 <div className="address-map-bar">
-                  <span className="map-search-label">Search location on:</span>
+                  <span className="map-search-label">Location on Map:</span>
                   <div className="map-buttons-group">
+                    <button
+                      type="button"
+                      className="button secondary compact map-action-chip"
+                      onClick={() => openMapModal({
+                        title: selected.name,
+                        address: query,
+                        area: address.islandCity || selected.area,
+                        phone: selected.phone,
+                        portions: selected.portions,
+                        status: selected.deliveryStatus,
+                        notes: address.notes || selected.notes,
+                      })}
+                      title="Open in-app map preview"
+                    >
+                      <Compass size={13} /> View Map Preview
+                    </button>
                     {Object.values(MAP_PROVIDERS).map((p) => (
                       <button
                         key={p.id}
                         type="button"
                         className="button secondary compact map-action-chip"
-                        onClick={() => openInMap(query, undefined, p.id)}
+                        onClick={() => openMapModal({
+                          title: selected.name,
+                          address: query,
+                          area: address.islandCity || selected.area,
+                          phone: selected.phone,
+                          portions: selected.portions,
+                          status: selected.deliveryStatus,
+                          notes: address.notes || selected.notes,
+                        })}
                         title={`Open location on ${p.label}`}
                       >
                         {p.badge} <ExternalLink size={11} />
@@ -420,6 +452,15 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
         }}
       />
     </Modal>}
+
+    {/* In-App Relative Size Map Modal */}
+    {mapTarget && (
+      <MapModal
+        target={mapTarget}
+        onClose={() => setMapTarget(null)}
+        onSelectPreferredMap={handleProviderChange}
+      />
+    )}
   </>;
 }
 

@@ -31,6 +31,7 @@ import {
   type RecordItem,
 } from "../types";
 import { DriverForm } from "./Forms";
+import { MapModal, type MapModalTarget } from "./MapModal";
 import { Modal } from "./Modal";
 
 function addressText(address?: Address): string {
@@ -63,6 +64,7 @@ export function DispatchPanel({
 }) {
   const [editingDriver, setEditingDriver] = useState<Driver | "new" | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState<string | "all" | "unassigned">("all");
+  const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
   const preferredMap = getPreferredMap();
 
   // Metrics
@@ -329,8 +331,16 @@ export function DispatchPanel({
                             <button
                               type="button"
                               className="icon-action-btn map-btn"
-                              title={`Open in ${preferredMap}`}
-                              onClick={() => window.open(MAP_PROVIDERS[preferredMap].getUrl(addressText(primary)), "_blank")}
+                              title="Preview location on map"
+                              onClick={() => setMapTarget({
+                                title: record.name,
+                                address: addressText(primary),
+                                area: record.area,
+                                phone: record.phone,
+                                portions: record.portions,
+                                status: record.deliveryStatus,
+                                notes: record.notes,
+                              })}
                             >
                               <Compass size={13} />
                             </button>
@@ -426,6 +436,14 @@ export function DispatchPanel({
             }}
           />
         </Modal>
+      )}
+
+      {/* In-App Relative Size Map Modal */}
+      {mapTarget && (
+        <MapModal
+          target={mapTarget}
+          onClose={() => setMapTarget(null)}
+        />
       )}
     </div>
   );
