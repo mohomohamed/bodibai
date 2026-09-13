@@ -119,12 +119,15 @@ export function getGoogleMapsEmbedUrl(query: string): string {
   return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
 }
 
+// Dedicated Admin accounts: "Mohamed" and "Shaufa"
+// All other usernames (including "Moho", "Driver 1", "Ali", etc.) are automatically treated as Drivers.
 export const ADMIN_USERS = ["mohamed", "shaufa"] as const;
 
 export function isAdminUser(name?: string): boolean {
   if (!name) return false;
   return ADMIN_USERS.includes(name.trim().toLowerCase() as any);
 }
+
 
 export const MALDIVES_PRESETS = [
   { label: "H.", prefix: "H. ", island: "Malé", desc: "Henveiru (Malé)" },

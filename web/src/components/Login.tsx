@@ -16,7 +16,7 @@ export function Login({ onLogin }: { onLogin: (name: string, password: string) =
         <div className="brand-mark" aria-hidden="true">B</div>
         <div className="login-intro"><p className="eyebrow">Distribution & Delivery</p><h1>Bondibai App</h1><p>Sign in to view delivery routes, Google Maps navigation, and household records.</p></div>
         <form onSubmit={submit} className="form-stack">
-          <div className="field"><label htmlFor="login-name">Your name</label><input id="login-name" name="name" autoComplete="name" required autoFocus placeholder="e.g. Mohamed, Shaufa, or Driver 1" /></div>
+          <div className="field"><label htmlFor="login-name">Your name</label><input id="login-name" name="name" autoComplete="name" required autoFocus placeholder="e.g. Mohamed / Shaufa (Admin) or Moho / Driver 1 (Driver)" /></div>
           <div className="field"><label htmlFor="login-password">Password</label><input id="login-password" name="password" type="password" autoComplete="current-password" required /></div>
           {error && <p className="form-error" role="alert">{error}</p>}
           <button className="button primary login-button" disabled={loading}><LockKeyhole size={17} />{loading ? "Signing in…" : "Sign in"}</button>
