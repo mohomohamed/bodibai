@@ -20,8 +20,9 @@
 }
 
 * { box-sizing: border-box; }
-html { min-height: 100%; background: #f5f7f5; }
-body { margin: 0; min-width: 320px; min-height: 100vh; }
+html { min-height: 100%; background: #f5f7f5; overflow-x: hidden; }
+body { margin: 0; min-width: 320px; min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
@@ -74,7 +75,7 @@ a { color: inherit; text-decoration: none; }
 .login-card .login-foot + * { display: none; }
 .login-card .login-footnote { margin: 22px 0 0; color: #82908a; font-size: .78rem; text-align: center; }
 
-.app-shell { min-height: 100vh; }
+.app-shell { min-height: 100vh; overflow-x: hidden; }
 .topbar { position: fixed; z-index: 40; inset: 0 0 auto 0; height: 72px; display: flex; align-items: center; gap: 18px; padding: 0 24px; background: rgba(255, 255, 255, .94); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); }
 .brand { width: 230px; display: flex; align-items: center; gap: 11px; padding: 0; border: 0; color: var(--green-900); background: transparent; font-weight: 800; font-size: 1.05rem; text-align: left; }
 .brand img { width: 38px; height: 38px; border-radius: 11px; }
@@ -662,7 +663,9 @@ a { color: inherit; text-decoration: none; }
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 6px;
+  padding-right: 16px;
   margin-bottom: 12px;
+  scroll-behavior: smooth;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -915,7 +918,10 @@ a { color: inherit; text-decoration: none; }
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 4px;
+  padding-right: 16px;
+  scroll-behavior: smooth;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .driver-filter-tabs::-webkit-scrollbar {
   display: none;
@@ -1071,6 +1077,23 @@ a { color: inherit; text-decoration: none; }
 .driver-stop-list {
   display: grid;
   gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.driver-stop-list::-webkit-scrollbar {
+  width: 5px;
+}
+.driver-stop-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.driver-stop-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 99px;
 }
 .stop-item {
   display: flex;
@@ -1195,6 +1218,23 @@ a { color: inherit; text-decoration: none; }
   display: grid;
   gap: 10px;
   margin-top: 12px;
+  max-height: 480px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #fed7aa transparent;
+}
+.unassigned-grid::-webkit-scrollbar {
+  width: 5px;
+}
+.unassigned-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.unassigned-grid::-webkit-scrollbar-thumb {
+  background: #fed7aa;
+  border-radius: 99px;
 }
 .unassigned-card {
   display: flex;
@@ -1246,16 +1286,18 @@ a { color: inherit; text-decoration: none; }
   background: #f8faf9;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .driver-portal {
   width: 100%;
   max-width: 680px;
   margin: 0 auto;
-  padding: 16px 16px 60px;
+  padding: 16px 16px calc(90px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 100vh;
 }
 
 .admin-preview-banner {
@@ -1888,7 +1930,7 @@ a { color: inherit; text-decoration: none; }
   .detail-hero .status-chip { position: static; }
   .section-title { align-items: flex-start; }
   .drivers-card, .import-section { padding: 16px; }
-  .driver-portal { padding: 12px 10px 60px; gap: 12px; }
+  .driver-portal { padding: 12px 10px calc(90px + env(safe-area-inset-bottom)); gap: 12px; }
   .driver-action-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .driver-route-launch-buttons { flex-direction: column; }
 }

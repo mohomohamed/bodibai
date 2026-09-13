@@ -8,7 +8,7 @@ import {
   Phone,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getGoogleMapsEmbedUrl, getGoogleMapsUrl } from "../types";
 
 export interface MapModalTarget {
@@ -38,7 +38,17 @@ export function MapModal({ target, onClose }: Props) {
   const [copied, setCopied] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
+  useEffect(() => {
+    if (!target) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [target]);
+
   if (!target) return null;
+
 
   const address = (target.address || "").trim();
   const area = target.area || "Malé";
