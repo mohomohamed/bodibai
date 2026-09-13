@@ -14,10 +14,14 @@ import {
   MessageSquare,
   Navigation,
   Phone,
+  Plus,
   RefreshCw,
+  Search,
   Sparkles,
   Truck,
   UserCheck,
+  UserMinus,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -72,10 +76,38 @@ export function DriverPortal({
   saveRecord,
   notify,
 }: Props) {
-  const [filter, setFilter] = useState<"pending" | "delivered" | "all">("pending");
+  const [filter, setFilter] = useState<"pending" | "delivered" | "all" | "claim">("pending");
+  const [claimArea, setClaimArea] = useState<"all" | "Malé" | "Hulhumalé" | "Villimalé">("all");
+  const [claimSearch, setClaimSearch] = useState("");
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [customOrder, setCustomOrder] = useState<string[]>([]);
+
+  // Available unassigned and undelivered records for drivers to self-assign
+  const availableUnassigned = useMemo(() => {
+    return records.filter(
+      (r) => (!r.driverId || r.driverId === "") && r.deliveryStatus !== "delivered"
+    );
+  }, [records]);
+
+  const filteredUnassigned = useMemo(() => {
+    const query = claimSearch.trim().toLowerCase();
+    return availableUnassigned.filter((r) => {
+      const matchesArea = claimArea === "all" || r.area === claimArea;
+      if (!matchesArea) return false;
+      if (!query) return true;
+      const searchSpace = [
+        r.name,
+        r.phone,
+        r.groupName,
+        r.area,
+        r.notes,
+        ...r.addresses.flatMap((a) => [a.addressLine1, a.addressLine2, a.islandCity, a.notes]),
+      ].join(" ").toLowerCase();
+      return searchSpace.includes(query);
+    });
+  }, [availableUnassigned, claimArea, claimSearch]);
 
   // Filter records assigned to this driver
   const assignedRecords = useMemo(() => {
@@ -154,6 +186,59 @@ export function DriverPortal({
       true,
     );
     notify(nextStatus === "delivered" ? `✅ Delivered to ${record.name}!` : `Marked ${record.name} as pending`);
+  };
+
+  const handleClaimRecord = async (record: RecordItem) => {
+    try {
+      setClaimingId(record.id);
+      await saveRecord(
+        {
+          id: record.id,
+          name: record.name,
+          phone: record.phone,
+          email: record.email,
+          category: record.category,
+          groupName: record.groupName,
+          area: record.area,
+          portions: record.portions,
+          deliveryStatus: record.deliveryStatus || "planned",
+          driverId: driver.id,
+          status: record.status,
+          notes: record.notes,
+        },
+        true,
+      );
+      notify(`🛵 Assigned ${record.name} to your route!`);
+    } catch {
+      notify("Failed to claim stop");
+    } finally {
+      setClaimingId(null);
+    }
+  };
+
+  const handleReleaseRecord = async (record: RecordItem) => {
+    try {
+      await saveRecord(
+        {
+          id: record.id,
+          name: record.name,
+          phone: record.phone,
+          email: record.email,
+          category: record.category,
+          groupName: record.groupName,
+          area: record.area,
+          portions: record.portions,
+          deliveryStatus: record.deliveryStatus,
+          driverId: "",
+          status: record.status,
+          notes: record.notes,
+        },
+        true,
+      );
+      notify(`Released ${record.name} to available stops`);
+    } catch {
+      notify("Failed to release stop");
+    }
   };
 
   const handleCopy = async (id: string, text: string) => {
@@ -342,231 +427,434 @@ export function DriverPortal({
           className={`driver-nav-tab ${filter === "all" ? "active" : ""}`}
           onClick={() => setFilter("all")}
         >
-          <span>All Stops</span>
+          <span>All My Stops</span>
           <span className="tab-badge">{totalStops}</span>
+        </button>
+        <button
+          type="button"
+          className={`driver-nav-tab claim-tab ${filter === "claim" ? "active" : ""}`}
+          onClick={() => setFilter("claim")}
+        >
+          <span>➕ Available Stops</span>
+          <span className="tab-badge claim-badge">{availableUnassigned.length}</span>
         </button>
       </div>
 
-      {/* All Delivered Celebration Banner */}
-      {totalStops > 0 && pendingStops === 0 && filter === "pending" && (
-        <section className="card driver-celebration-card" aria-label="Deliveries completed">
-          <div className="celebration-icon">🎉</div>
-          <h2>All deliveries completed!</h2>
-          <p>Great job, {driver.name}! All {totalStops} assigned households have received their Bondibai.</p>
-          <button
-            type="button"
-            className="button secondary"
-            onClick={() => setFilter("all")}
-          >
-            View All Completed Stops
-          </button>
-        </section>
-      )}
+      {/* Available Stops / Claim Pool View */}
+      {filter === "claim" ? (
+        <section className="driver-claim-pool" aria-label="Available stops pool">
+          <div className="claim-pool-header card">
+            <div className="claim-header-titles">
+              <h2>Available Stops ({filteredUnassigned.length})</h2>
+              <p>Self-assign undelivered households directly to your delivery route.</p>
+            </div>
 
-      {/* Stop Cards List */}
-      <section className="driver-stops-container" aria-label="Delivery stop list">
-        {visibleStops.map((record) => {
-          const index = orderedRecords.findIndex((r) => r.id === record.id);
-          const primary = record.addresses.find((a) => a.isPrimary) || record.addresses[0];
-          const fullAddress = addressText(primary);
-          const cleanPhone = cleanMaldivesPhone(record.phone);
-          const isDone = record.deliveryStatus === "delivered";
+            {/* Island Filter Pills */}
+            <div className="claim-island-pills">
+              <button
+                type="button"
+                className={`island-pill ${claimArea === "all" ? "active" : ""}`}
+                onClick={() => setClaimArea("all")}
+              >
+                <span>All Areas</span>
+                <span className="pill-count">{availableUnassigned.length}</span>
+              </button>
+              <button
+                type="button"
+                className={`island-pill pill-male ${claimArea === "Malé" ? "active" : ""}`}
+                onClick={() => setClaimArea("Malé")}
+              >
+                <span className="pill-dot red-dot" />
+                <span>Malé</span>
+                <span className="pill-count">{availableUnassigned.filter((r) => r.area === "Malé").length}</span>
+              </button>
+              <button
+                type="button"
+                className={`island-pill pill-hulh ${claimArea === "Hulhumalé" ? "active" : ""}`}
+                onClick={() => setClaimArea("Hulhumalé")}
+              >
+                <span className="pill-dot cyan-dot" />
+                <span>Hulhumalé</span>
+                <span className="pill-count">{availableUnassigned.filter((r) => r.area === "Hulhumalé").length}</span>
+              </button>
+              <button
+                type="button"
+                className={`island-pill pill-villi ${claimArea === "Villimalé" ? "active" : ""}`}
+                onClick={() => setClaimArea("Villimalé")}
+              >
+                <span className="pill-dot green-dot" />
+                <span>Villimalé</span>
+                <span className="pill-count">{availableUnassigned.filter((r) => r.area === "Villimalé").length}</span>
+              </button>
+            </div>
 
-          // Clean WhatsApp arrival message WITHOUT mentioning portion counts
-          const waMessage = `Assalaamu Alaikum! Bondibai delivery for ${record.name}. I am approaching your address at ${fullAddress}.\n\n✨ _Bondibai App_`;
-          const waUrl = cleanPhone
-            ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`
-            : null;
+            {/* Claim Search Bar */}
+            <div className="claim-search-bar">
+              <Search size={16} className="claim-search-icon" />
+              <input
+                type="search"
+                placeholder="Search addresses, household names, phone…"
+                value={claimSearch}
+                onChange={(e) => setClaimSearch(e.target.value)}
+                className="claim-search-input"
+              />
+              {claimSearch && (
+                <button
+                  type="button"
+                  className="icon-button compact"
+                  onClick={() => setClaimSearch("")}
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
 
-          return (
-            <article
-              key={record.id}
-              className={`driver-stop-card card ${isDone ? "is-delivered" : ""}`}
-            >
-              {/* Card Header & Sequencing */}
-              <div className="stop-card-header">
-                <div className="stop-badge-row">
-                  <span className="stop-number">#{index + 1}</span>
-                  {record.area && (
-                    <span className={`area-tag tag-${record.area}`}>
-                      {record.area}
-                    </span>
-                  )}
-                  <span className="stop-portions-chip">
-                    🍲 {record.portions} portion{record.portions === 1 ? "" : "s"}
-                  </span>
-                  {record.groupName && (
-                    <span className="stop-group-chip">{record.groupName}</span>
-                  )}
-                </div>
+          {/* Available Stop Cards List */}
+          <div className="claim-stops-list">
+            {filteredUnassigned.map((record) => {
+              const primary = record.addresses.find((a) => a.isPrimary) || record.addresses[0];
+              const fullAddress = addressText(primary);
+              const isClaiming = claimingId === record.id;
 
-                <div className="stop-reorder-actions">
-                  <button
-                    type="button"
-                    className="icon-button reorder-btn"
-                    onClick={() => moveStop(index, "up")}
-                    disabled={index === 0}
-                    aria-label={`Move stop ${index + 1} up`}
-                    title="Move stop up"
-                  >
-                    <ArrowUp size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-button reorder-btn"
-                    onClick={() => moveStop(index, "down")}
-                    disabled={index === orderedRecords.length - 1}
-                    aria-label={`Move stop ${index + 1} down`}
-                    title="Move stop down"
-                  >
-                    <ArrowDown size={14} />
-                  </button>
-                </div>
-              </div>
+              return (
+                <article key={record.id} className="card claim-stop-card">
+                  <div className="claim-card-top">
+                    <div className="claim-badge-row">
+                      {record.area && (
+                        <span className={`area-tag tag-${record.area}`}>
+                          {record.area}
+                        </span>
+                      )}
+                      <span className="stop-portions-chip">
+                        🍲 {record.portions} portion{record.portions === 1 ? "" : "s"}
+                      </span>
+                      {record.groupName && (
+                        <span className="stop-group-chip">{record.groupName}</span>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Household Name & Address */}
-              <div className="stop-recipient-block">
-                <h2 className="stop-name">{record.name}</h2>
-                <div className="stop-address-row">
-                  <MapPin size={16} className="address-pin" />
-                  <span className="stop-address-text">{fullAddress}</span>
-                  {primary?.addressLine1 && (
+                  <div className="claim-recipient-block">
+                    <h3 className="claim-name">{record.name}</h3>
+                    <div className="stop-address-row">
+                      <MapPin size={16} className="address-pin" />
+                      <span className="stop-address-text">{fullAddress}</span>
+                      {primary?.addressLine1 && (
+                        <button
+                          type="button"
+                          className="icon-button compact copy-icon-btn"
+                          onClick={() => void handleCopy(record.id, fullAddress)}
+                          title="Copy address"
+                          aria-label="Copy address"
+                        >
+                          {copiedId === record.id ? <Check size={13} className="copied-icon" /> : <Copy size={13} />}
+                        </button>
+                      )}
+                    </div>
+                    {record.notes && (
+                      <p className="stop-delivery-note">
+                        <strong>Note:</strong> {record.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="claim-actions-row">
                     <button
                       type="button"
-                      className="icon-button compact copy-icon-btn"
-                      onClick={() => void handleCopy(record.id, fullAddress)}
-                      title="Copy address"
-                      aria-label="Copy address"
+                      className="button secondary compact preview-map-btn"
+                      onClick={() =>
+                        setMapTarget({
+                          title: record.name,
+                          address: fullAddress,
+                          area: record.area,
+                          phone: record.phone,
+                          portions: record.portions,
+                          status: record.deliveryStatus,
+                          notes: record.notes,
+                        })
+                      }
+                      title="Preview map location"
                     >
-                      {copiedId === record.id ? <Check size={13} className="copied-icon" /> : <Copy size={13} />}
+                      <Compass size={15} />
+                      <span>Map Preview</span>
                     </button>
-                  )}
-                </div>
-                {record.notes && (
-                  <p className="stop-delivery-note">
-                    <strong>Note:</strong> {record.notes}
-                  </p>
-                )}
-              </div>
+                    <button
+                      type="button"
+                      className="button primary claim-assign-btn"
+                      onClick={() => void handleClaimRecord(record)}
+                      disabled={isClaiming}
+                    >
+                      <UserCheck size={16} />
+                      <span>{isClaiming ? "Assigning…" : "Assign to Me 🛵"}</span>
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
 
-              {/* 1-Tap Action Buttons Grid */}
-              <div className="driver-action-grid">
-                {/* 1-Tap High Contrast Call Button */}
-                {record.phone ? (
-                  <a
-                    href={`tel:${record.phone}`}
-                    className="driver-action-btn call-customer-btn"
-                    title={`Call ${record.name} at ${record.phone}`}
-                  >
-                    <Phone size={17} />
-                    <span>Call Customer</span>
-                  </a>
-                ) : (
+            {!filteredUnassigned.length && (
+              <div className="card driver-empty-card">
+                <p>No available unassigned stops matching your search.</p>
+                {claimSearch && (
                   <button
                     type="button"
-                    className="driver-action-btn disabled-btn"
-                    disabled
+                    className="button secondary compact"
+                    onClick={() => { setClaimSearch(""); setClaimArea("all"); }}
                   >
-                    <Phone size={17} />
-                    <span>No Phone</span>
+                    Clear Filters
                   </button>
                 )}
-
-                {/* WhatsApp Arrival Notice */}
-                {waUrl ? (
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="driver-action-btn wa-customer-btn"
-                    title="Send WhatsApp arrival notice"
-                  >
-                    <MessageSquare size={17} />
-                    <span>WhatsApp</span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    className="driver-action-btn disabled-btn"
-                    disabled
-                  >
-                    <MessageSquare size={17} />
-                    <span>No WhatsApp</span>
-                  </button>
-                )}
-
-                {/* Single Stop GPS Directions */}
-                <button
-                  type="button"
-                  className="driver-action-btn nav-gps-btn"
-                  onClick={() => launchSingleStopNav(record, primary)}
-                  title="Open GPS Navigation in Google Maps"
-                >
-                  <Navigation size={17} />
-                  <span>Navigate</span>
-                </button>
-
-                {/* In-App Map Preview */}
-                <button
-                  type="button"
-                  className="driver-action-btn preview-map-btn"
-                  onClick={() =>
-                    setMapTarget({
-                      title: record.name,
-                      address: fullAddress,
-                      area: record.area,
-                      phone: record.phone,
-                      portions: record.portions,
-                      status: record.deliveryStatus,
-                      notes: record.notes,
-                    })
-                  }
-                  title="Preview map location"
-                >
-                  <Compass size={17} />
-                  <span>Preview</span>
-                </button>
               </div>
-
-              {/* 1-Tap Delivery Status Confirmation */}
-              <div className="stop-footer-toggle">
-                <button
-                  type="button"
-                  className={`button stop-delivered-toggle ${isDone ? "is-delivered-btn" : "is-pending-btn"}`}
-                  onClick={() => void handleToggleDelivered(record)}
-                >
-                  {isDone ? (
-                    <>
-                      <CheckCircle2 size={18} />
-                      <span>Delivered ✅ (Tap to undo)</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={18} />
-                      <span>Mark Delivered ✅</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </article>
-          );
-        })}
-
-        {/* Empty States */}
-        {!visibleStops.length && totalStops > 0 && filter === "delivered" && (
-          <div className="card subtle-empty-card">
-            <p>No deliveries completed yet. Tap "Mark Delivered" as you finish each stop.</p>
+            )}
           </div>
-        )}
+        </section>
+      ) : (
+        <>
+          {/* All Delivered Celebration Banner */}
+          {totalStops > 0 && pendingStops === 0 && filter === "pending" && (
+            <section className="card driver-celebration-card" aria-label="Deliveries completed">
+              <div className="celebration-icon">🎉</div>
+              <h2>All deliveries completed!</h2>
+              <p>Great job, {driver.name}! All {totalStops} assigned households have received their Bondibai.</p>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setFilter("all")}
+              >
+                View All Completed Stops
+              </button>
+            </section>
+          )}
 
-        {totalStops === 0 && (
-          <section className="card driver-empty-card">
-            <div className="empty-icon"><Truck size={36} /></div>
-            <h2>No deliveries assigned yet</h2>
-            <p>You do not have any assigned households on your route. Please contact the administrator (Mohamed or Shaufa) to assign deliveries to your fleet profile.</p>
+          {/* Stop Cards List */}
+          <section className="driver-stops-container" aria-label="Delivery stop list">
+            {visibleStops.map((record) => {
+              const index = orderedRecords.findIndex((r) => r.id === record.id);
+              const primary = record.addresses.find((a) => a.isPrimary) || record.addresses[0];
+              const fullAddress = addressText(primary);
+              const cleanPhone = cleanMaldivesPhone(record.phone);
+              const isDone = record.deliveryStatus === "delivered";
+
+              // Clean WhatsApp arrival message WITHOUT mentioning portion counts
+              const waMessage = `Assalaamu Alaikum! Bondibai delivery for ${record.name}. I am approaching your address at ${fullAddress}.\n\n✨ _Bondibai App_`;
+              const waUrl = cleanPhone
+                ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`
+                : null;
+
+              return (
+                <article
+                  key={record.id}
+                  className={`driver-stop-card card ${isDone ? "is-delivered" : ""}`}
+                >
+                  {/* Card Header & Sequencing */}
+                  <div className="stop-card-header">
+                    <div className="stop-badge-row">
+                      <span className="stop-number">#{index + 1}</span>
+                      {record.area && (
+                        <span className={`area-tag tag-${record.area}`}>
+                          {record.area}
+                        </span>
+                      )}
+                      <span className="stop-portions-chip">
+                        🍲 {record.portions} portion{record.portions === 1 ? "" : "s"}
+                      </span>
+                      {record.groupName && (
+                        <span className="stop-group-chip">{record.groupName}</span>
+                      )}
+                    </div>
+
+                    <div className="stop-reorder-actions">
+                      <button
+                        type="button"
+                        className="icon-button reorder-btn"
+                        onClick={() => moveStop(index, "up")}
+                        disabled={index === 0}
+                        aria-label={`Move stop ${index + 1} up`}
+                        title="Move stop up"
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-button reorder-btn"
+                        onClick={() => moveStop(index, "down")}
+                        disabled={index === orderedRecords.length - 1}
+                        aria-label={`Move stop ${index + 1} down`}
+                        title="Move stop down"
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Household Name & Address */}
+                  <div className="stop-recipient-block">
+                    <h2 className="stop-name">{record.name}</h2>
+                    <div className="stop-address-row">
+                      <MapPin size={16} className="address-pin" />
+                      <span className="stop-address-text">{fullAddress}</span>
+                      {primary?.addressLine1 && (
+                        <button
+                          type="button"
+                          className="icon-button compact copy-icon-btn"
+                          onClick={() => void handleCopy(record.id, fullAddress)}
+                          title="Copy address"
+                          aria-label="Copy address"
+                        >
+                          {copiedId === record.id ? <Check size={13} className="copied-icon" /> : <Copy size={13} />}
+                        </button>
+                      )}
+                    </div>
+                    {record.notes && (
+                      <p className="stop-delivery-note">
+                        <strong>Note:</strong> {record.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 1-Tap Action Buttons Grid */}
+                  <div className="driver-action-grid">
+                    {/* 1-Tap High Contrast Call Button */}
+                    {record.phone ? (
+                      <a
+                        href={`tel:${record.phone}`}
+                        className="driver-action-btn call-customer-btn"
+                        title={`Call ${record.name} at ${record.phone}`}
+                      >
+                        <Phone size={17} />
+                        <span>Call Customer</span>
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        className="driver-action-btn disabled-btn"
+                        disabled
+                      >
+                        <Phone size={17} />
+                        <span>No Phone</span>
+                      </button>
+                    )}
+
+                    {/* WhatsApp Arrival Notice */}
+                    {waUrl ? (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="driver-action-btn wa-customer-btn"
+                        title="Send WhatsApp arrival notice"
+                      >
+                        <MessageSquare size={17} />
+                        <span>WhatsApp</span>
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        className="driver-action-btn disabled-btn"
+                        disabled
+                      >
+                        <MessageSquare size={17} />
+                        <span>No WhatsApp</span>
+                      </button>
+                    )}
+
+                    {/* Single Stop GPS Directions */}
+                    <button
+                      type="button"
+                      className="driver-action-btn nav-gps-btn"
+                      onClick={() => launchSingleStopNav(record, primary)}
+                      title="Open GPS Navigation in Google Maps"
+                    >
+                      <Navigation size={17} />
+                      <span>Navigate</span>
+                    </button>
+
+                    {/* In-App Map Preview */}
+                    <button
+                      type="button"
+                      className="driver-action-btn preview-map-btn"
+                      onClick={() =>
+                        setMapTarget({
+                          title: record.name,
+                          address: fullAddress,
+                          area: record.area,
+                          phone: record.phone,
+                          portions: record.portions,
+                          status: record.deliveryStatus,
+                          notes: record.notes,
+                        })
+                      }
+                      title="Preview map location"
+                    >
+                      <Compass size={17} />
+                      <span>Preview</span>
+                    </button>
+                  </div>
+
+                  {/* 1-Tap Delivery Status Confirmation & Release Option */}
+                  <div className="stop-footer-toggle">
+                    <button
+                      type="button"
+                      className={`button stop-delivered-toggle ${isDone ? "is-delivered-btn" : "is-pending-btn"}`}
+                      onClick={() => void handleToggleDelivered(record)}
+                    >
+                      {isDone ? (
+                        <>
+                          <CheckCircle2 size={18} />
+                          <span>Delivered ✅ (Tap to undo)</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={18} />
+                          <span>Mark Delivered ✅</span>
+                        </>
+                      )}
+                    </button>
+                    {!isDone && (
+                      <button
+                        type="button"
+                        className="button secondary ghost compact release-stop-btn"
+                        onClick={() => void handleReleaseRecord(record)}
+                        title="Release this stop back to available stops"
+                      >
+                        <UserMinus size={14} />
+                        <span>Release</span>
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+
+            {/* Empty States */}
+            {!visibleStops.length && totalStops > 0 && filter === "delivered" && (
+              <div className="card subtle-empty-card">
+                <p>No deliveries completed yet. Tap "Mark Delivered" as you finish each stop.</p>
+              </div>
+            )}
+
+            {totalStops === 0 && (
+              <section className="card driver-empty-card">
+                <div className="empty-icon"><Truck size={36} /></div>
+                <h2>No deliveries assigned yet</h2>
+                <p>You do not currently have any assigned households on your active route.</p>
+                {availableUnassigned.length > 0 && (
+                  <button
+                    type="button"
+                    className="button primary"
+                    onClick={() => setFilter("claim")}
+                  >
+                    <Plus size={16} />
+                    <span>Claim Available Stops ({availableUnassigned.length})</span>
+                  </button>
+                )}
+              </section>
+            )}
           </section>
-        )}
-      </section>
+        </>
+      )}
 
       {/* In-App Google Maps Preview Modal */}
       {mapTarget && (

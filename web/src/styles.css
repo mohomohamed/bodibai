@@ -1621,6 +1621,21 @@ a { color: inherit; text-decoration: none; }
   background: #dcfce7;
   color: #15803d;
 }
+.claim-badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+.claim-tab {
+  color: #92400e;
+}
+.claim-tab.active {
+  background: #f59e0b;
+  color: white;
+}
+.claim-tab.active .claim-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
 
 /* Celebration Card */
 .driver-celebration-card {
@@ -1830,9 +1845,12 @@ a { color: inherit; text-decoration: none; }
 
 .stop-footer-toggle {
   margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .stop-delivered-toggle {
-  width: 100%;
+  flex: 1;
   height: 42px;
   border-radius: 11px;
   font-size: 0.88rem;
@@ -1854,6 +1872,146 @@ a { color: inherit; text-decoration: none; }
   background: #e2e8f0;
   color: #475569;
   border: 1px solid #cbd5e1;
+}
+.release-stop-btn {
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 11px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #f8fafc;
+}
+.release-stop-btn:hover {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+/* Driver Claim Pool & Available Stops */
+.driver-claim-pool {
+  display: grid;
+  gap: 14px;
+}
+.claim-pool-header {
+  padding: 18px 20px;
+  display: grid;
+  gap: 14px;
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+  border-color: #fde68a;
+}
+.claim-header-titles h2 {
+  margin: 0;
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #92400e;
+}
+.claim-header-titles p {
+  margin: 3px 0 0;
+  font-size: 0.82rem;
+  color: #78350f;
+}
+.claim-island-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.claim-island-pills::-webkit-scrollbar {
+  display: none;
+}
+.claim-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 40px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+.claim-search-bar:focus-within {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+.claim-search-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+.claim-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.84rem;
+  color: var(--ink);
+}
+.claim-stops-list {
+  display: grid;
+  gap: 12px;
+}
+.claim-stop-card {
+  padding: 16px 18px;
+  display: grid;
+  gap: 12px;
+  border-color: #e2e8f0;
+  transition: all 0.15s ease;
+}
+.claim-stop-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+.claim-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.claim-badge-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.claim-recipient-block {
+  display: grid;
+  gap: 4px;
+}
+.claim-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.claim-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed #e2e8f0;
+}
+.claim-assign-btn {
+  height: 38px;
+  padding: 0 14px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  background: #059669;
+  color: white;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.claim-assign-btn:hover:not(:disabled) {
+  background: #047857;
+  transform: translateY(-1px);
 }
 
 .subtle-empty-card {

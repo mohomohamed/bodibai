@@ -1,12 +1,20 @@
 import { X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
+import { lockBodyScroll, unlockBodyScroll } from "../scrollLock";
 
 export function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const prevActive = document.activeElement as HTMLElement | null;
+    lockBodyScroll();
     return () => {
-      document.body.style.overflow = original;
+      unlockBodyScroll();
+      if (prevActive && typeof prevActive.focus === "function") {
+        try {
+          prevActive.focus({ preventScroll: true });
+        } catch {
+          // ignore
+        }
+      }
     };
   }, []);
 

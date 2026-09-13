@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getGoogleMapsEmbedUrl, getGoogleMapsUrl } from "../types";
+import { lockBodyScroll, unlockBodyScroll } from "../scrollLock";
 
 export interface MapModalTarget {
   title: string;
@@ -40,10 +41,17 @@ export function MapModal({ target, onClose }: Props) {
 
   useEffect(() => {
     if (!target) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const prevActive = document.activeElement as HTMLElement | null;
+    lockBodyScroll();
     return () => {
-      document.body.style.overflow = original;
+      unlockBodyScroll();
+      if (prevActive && typeof prevActive.focus === "function") {
+        try {
+          prevActive.focus({ preventScroll: true });
+        } catch {
+          // ignore
+        }
+      }
     };
   }, [target]);
 
