@@ -544,9 +544,10 @@ export function DriverPortal({
               const primary = record.addresses.find((a) => a.isPrimary) || record.addresses[0];
               const fullAddress = addressText(primary);
               const isClaiming = claimingId === record.id;
+              const isNotPickingUp = record.deliveryStatus === "not-picking-up";
 
               return (
-                <article key={record.id} className="card claim-stop-card">
+                <article key={record.id} className={`card claim-stop-card ${isNotPickingUp ? "is-not-picking-up" : ""}`}>
                   <div className="claim-card-top">
                     <div className="claim-badge-row">
                       {record.area && (
@@ -560,6 +561,17 @@ export function DriverPortal({
                       {record.groupName && (
                         <span className="stop-group-chip">{record.groupName}</span>
                       )}
+                      <span className={`status-chip status-${record.deliveryStatus || "planned"}`}>
+                        {record.deliveryStatus === "prepared"
+                          ? "Prepared 📦"
+                          : record.deliveryStatus === "out-for-delivery"
+                          ? "Out 🛵"
+                          : record.deliveryStatus === "not-picking-up"
+                          ? "No Answer 📵"
+                          : record.deliveryStatus === "paused"
+                          ? "Hold ⏸️"
+                          : "Planned ⏳"}
+                      </span>
                     </div>
                   </div>
 
@@ -584,6 +596,12 @@ export function DriverPortal({
                       <p className="stop-delivery-note">
                         <strong>Note:</strong> {record.notes}
                       </p>
+                    )}
+                    {isNotPickingUp && (
+                      <div className="not-picking-up-banner">
+                        <PhoneOff size={14} />
+                        <span>Previous attempt: Recipient not picking up call</span>
+                      </div>
                     )}
                   </div>
 

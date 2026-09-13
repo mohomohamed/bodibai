@@ -2053,6 +2053,10 @@ a { color: inherit; text-decoration: none; }
   border-color: #cbd5e1;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
+.claim-stop-card.is-not-picking-up {
+  border-color: #fdba74;
+  background: #fffcf8;
+}
 .claim-card-top {
   display: flex;
   align-items: center;
