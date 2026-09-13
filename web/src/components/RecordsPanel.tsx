@@ -1,0 +1,115 @@
+import {
+  ArrowDownAZ, ChevronRight, CirclePlus, Edit3, Mail, MapPin, Phone, Search, SlidersHorizontal, Trash2, UserRound,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import type { Address, AddressInput, Driver, RecordInput, RecordItem } from "../types";
+import { AddressForm, RecordForm } from "./Forms";
+import { Modal } from "./Modal";
+
+function relativeTime(timestamp: number): string {
+  const seconds = Math.max(1, Math.round((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return "just now";
+  const minutes = Math.round(seconds / 60); if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60); if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24); return days < 30 ? `${days}d ago` : new Date(timestamp).toLocaleDateString();
+}
+
+function addressText(address?: Address): string {
+  if (!address) return "No address added";
+  return [address.addressLine1, address.addressLine2, address.islandCity, address.atollRegion].filter(Boolean).join(", ") || "Address details not entered";
+}
+
+interface Props {
+  records: RecordItem[];
+  drivers: Driver[];
+  saveRecord: (value: RecordInput, editing: boolean) => Promise<void>;
+  deleteRecord: (id: string) => Promise<void>;
+  saveAddress: (value: AddressInput, editing: boolean) => Promise<void>;
+  deleteAddress: (id: string) => Promise<void>;
+  notify: (message: string) => void;
+}
+
+export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveAddress, deleteAddress, notify }: Props) {
+  const [query, setQuery] = useState(""), [area, setArea] = useState("all"), [status, setStatus] = useState("all");
+  const [sort, setSort] = useState<"updated" | "name">("updated"), [filtersOpen, setFiltersOpen] = useState(false);
+  const [editing, setEditing] = useState<RecordItem | "new" | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
+  const [addressEdit, setAddressEdit] = useState<{ recordId: string; address?: Address } | null>(null);
+  const selected = records.find((record) => record.id === selectedId);
+  const areas = useMemo(() => [...new Set(records.map((record) => record.area).filter(Boolean))].sort(), [records]);
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return records.filter((record) => {
+      const searchable = [record.name, record.phone, record.email, record.category, record.groupName, record.area, record.notes,
+        ...record.addresses.flatMap((address) => [address.addressLine1, address.addressLine2, address.islandCity, address.atollRegion, address.notes])].join(" ").toLowerCase();
+      return (!normalized || searchable.includes(normalized)) && (area === "all" || record.area === area) && (status === "all" || record.deliveryStatus === status);
+    }).sort((left, right) => sort === "name" ? left.name.localeCompare(right.name) : right.updatedAt - left.updatedAt);
+  }, [area, query, records, sort, status]);
+
+  const removeRecord = async (record: RecordItem) => {
+    if (!window.confirm(`Delete ${record.name}? This can be recovered from the D1 database if needed.`)) return;
+    await deleteRecord(record.id); setSelectedId(null); notify("Record deleted");
+  };
+  const removeAddress = async (address: Address) => {
+    if (!window.confirm(`Remove ${address.label || "this address"}?`)) return;
+    await deleteAddress(address.id); notify("Address removed");
+  };
+
+  return <>
+    <div className="page-heading records-heading">
+      <div><p className="eyebrow">Shared directory</p><h1>Records</h1><p>{records.length} record{records.length === 1 ? "" : "s"} · {records.reduce((sum, item) => sum + item.portions, 0)} portions</p></div>
+      <button className="button primary desktop-add" onClick={() => setEditing("new")}><CirclePlus size={18} />Add record</button>
+    </div>
+    <section className="toolbar card">
+      <label className="search-box"><Search size={18} /><span className="sr-only">Search records</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, phone, address…" /></label>
+      <button className={`button filter-button ${filtersOpen ? "active" : ""}`} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={17} />Filters{(area !== "all" || status !== "all") && <span className="filter-dot" />}</button>
+      <button className="button filter-button" onClick={() => setSort(sort === "updated" ? "name" : "updated")}><ArrowDownAZ size={17} />{sort === "updated" ? "Recent" : "Name"}</button>
+      {filtersOpen && <div className="filter-row">
+        <label>Area<select value={area} onChange={(event) => setArea(event.target.value)}><option value="all">All areas</option>{areas.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label>Delivery<select value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All statuses</option><option value="planned">Planned</option><option value="prepared">Prepared</option><option value="out-for-delivery">Out for delivery</option><option value="delivered">Delivered</option><option value="paused">Paused</option></select></label>
+        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); }}>Clear filters</button>
+      </div>}
+    </section>
+    <div className="list-meta"><span>{filtered.length} shown</span>{query && <button className="text-button" onClick={() => setQuery("")}>Clear search</button>}</div>
+    {filtered.length ? <section className="record-list" aria-label="Record list">
+      {filtered.map((record) => {
+        const primary = record.addresses.find((item) => item.isPrimary) || record.addresses[0];
+        const driver = drivers.find((item) => item.id === record.driverId);
+        return <article className="record-card" key={record.id} tabIndex={0} onClick={() => setSelectedId(record.id)} onKeyDown={(event) => { if (event.key === "Enter") setSelectedId(record.id); }}>
+          <div className="avatar">{record.name.slice(0, 1).toUpperCase()}</div>
+          <div className="record-main"><div className="record-title-row"><h2>{record.name}</h2><span className={`status-chip status-${record.deliveryStatus}`}>{record.deliveryStatus.replaceAll("-", " ")}</span></div>
+            <div className="record-contact">{record.phone && <span><Phone size={14} />{record.phone}</span>}<span><MapPin size={14} />{addressText(primary)}</span></div>
+            <div className="record-footer"><span>{record.portions} portion{record.portions === 1 ? "" : "s"}</span>{record.area && <span>{record.area}</span>}{driver && <span>{driver.name}</span>}<span className="updated">Updated {relativeTime(record.updatedAt)}{record.updatedBy ? ` by ${record.updatedBy}` : ""}</span></div>
+          </div><ChevronRight className="record-chevron" size={20} />
+        </article>;
+      })}
+    </section> : <section className="empty-state card"><div className="empty-icon"><UserRound /></div><h2>No matching records</h2><p>{records.length ? "Try a different search or clear the filters." : "Add the first household to get started."}</p>{!records.length && <button className="button primary" onClick={() => setEditing("new")}><CirclePlus size={18} />Add record</button>}</section>}
+
+    <button className="fab" aria-label="Add record" onClick={() => setEditing("new")}><CirclePlus /></button>
+
+    {editing && <Modal title={editing === "new" ? "Add record" : "Edit record"} onClose={() => setEditing(null)} wide>
+      <RecordForm record={editing === "new" ? undefined : editing} drivers={drivers} onCancel={() => setEditing(null)} onSave={async (value) => { await saveRecord(value, editing !== "new"); setEditing(null); notify(editing === "new" ? "Record added" : "Changes saved"); }} />
+    </Modal>}
+
+    {selected && <Modal title="Record details" onClose={() => setSelectedId(null)} wide>
+      <div className="detail-hero"><div className="avatar large">{selected.name.slice(0, 1).toUpperCase()}</div><div><h2>{selected.name}</h2><p>{selected.groupName || selected.category || "Record"}{selected.area ? ` · ${selected.area}` : ""}</p></div><span className={`status-chip status-${selected.deliveryStatus}`}>{selected.deliveryStatus.replaceAll("-", " ")}</span></div>
+      <div className="detail-actions"><button className="button secondary" onClick={() => setEditing(selected)}><Edit3 size={16} />Edit</button><button className="button danger-ghost" onClick={() => void removeRecord(selected)}><Trash2 size={16} />Delete</button></div>
+      <dl className="detail-grid">
+        <div><dt>Phone</dt><dd>{selected.phone || "—"}</dd></div><div><dt>Email</dt><dd>{selected.email || "—"}</dd></div>
+        <div><dt>Portions</dt><dd>{selected.portions}</dd></div><div><dt>Driver</dt><dd>{drivers.find((item) => item.id === selected.driverId)?.name || "Unassigned"}</dd></div>
+        <div><dt>Category</dt><dd>{selected.category || "—"}</dd></div><div><dt>Status</dt><dd>{selected.status}</dd></div>
+      </dl>
+      {selected.notes && <div className="detail-notes"><h3>Notes</h3><p>{selected.notes}</p></div>}
+      <div className="section-title"><div><h3>Addresses</h3><p>{selected.addresses.length} saved</p></div><button className="button secondary compact" onClick={() => setAddressEdit({ recordId: selected.id })}><CirclePlus size={16} />Add address</button></div>
+      <div className="address-list">{selected.addresses.map((address) => <article className="address-card" key={address.id}>
+        <MapPin size={18} /><div><div className="address-title"><h4>{address.label || "Address"}</h4>{address.isPrimary && <span>Primary</span>}</div><p>{addressText(address)}</p>{address.notes && <small>{address.notes}</small>}</div>
+        <div className="inline-actions"><button className="icon-button" aria-label="Edit address" onClick={() => setAddressEdit({ recordId: selected.id, address })}><Edit3 size={16} /></button><button className="icon-button danger" aria-label="Delete address" onClick={() => void removeAddress(address)}><Trash2 size={16} /></button></div>
+      </article>)}{!selected.addresses.length && <p className="subtle-empty">No address has been added.</p>}</div>
+      <p className="audit-line">Last updated {relativeTime(selected.updatedAt)}{selected.updatedBy ? ` by ${selected.updatedBy}` : ""} · Version {selected.version}</p>
+      {(selected.phone || selected.email) && <div className="mobile-contact-actions">{selected.phone && <a className="button secondary" href={`tel:${selected.phone}`}><Phone size={16} />Call</a>}{selected.email && <a className="button secondary" href={`mailto:${selected.email}`}><Mail size={16} />Email</a>}</div>}
+    </Modal>}
+
+    {addressEdit && <Modal title={addressEdit.address ? "Edit address" : "Add address"} onClose={() => setAddressEdit(null)}>
+      <AddressForm recordId={addressEdit.recordId} address={addressEdit.address} onCancel={() => setAddressEdit(null)} onSave={async (value) => { await saveAddress(value, Boolean(addressEdit.address)); setAddressEdit(null); notify(addressEdit.address ? "Address updated" : "Address added"); }} />
+    </Modal>}
+  </>;
+}

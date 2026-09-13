@@ -1,0 +1,2 @@
+APP_PASSWORD=development-password
+ALLOWED_ORIGINS=http://localhost:5173

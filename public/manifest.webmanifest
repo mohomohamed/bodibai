@@ -1,0 +1,10 @@
+{
+  "name": "Bondibai List",
+  "short_name": "Bondibai",
+  "description": "Plan portions, addresses and deliveries for your Bondibai list.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f7f9",
+  "theme_color": "#082f49",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
