@@ -1,15 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Compass, ExternalLink, MapPin } from "lucide-react";
+import { Compass, MapPin } from "lucide-react";
 import {
-  getPreferredMap,
   MALDIVES_PRESETS,
-  MAP_PROVIDERS,
-  setPreferredMap,
   type Address,
   type AddressInput,
   type Driver,
   type DriverInput,
-  type MapProvider,
   type RecordInput,
   type RecordItem,
 } from "../types";
@@ -28,7 +24,6 @@ export function RecordForm({ record, drivers, onSave, onCancel }: {
   const [error, setError] = useState("");
   const [addressLine, setAddressLine] = useState(existingPrimary?.addressLine1 || "");
   const [area, setArea] = useState(record?.area || existingPrimary?.islandCity || "Malé");
-  const [mapProvider, setMapProvider] = useState<MapProvider>(getPreferredMap());
   const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
 
   const applyPreset = (prefix: string, island: string) => {
@@ -48,11 +43,6 @@ export function RecordForm({ record, drivers, onSave, onCancel }: {
       address: query,
       area: area || "Malé",
     });
-  };
-
-  const handleProviderChange = (provider: MapProvider) => {
-    setMapProvider(provider);
-    setPreferredMap(provider);
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -94,26 +84,14 @@ export function RecordForm({ record, drivers, onSave, onCancel }: {
           <label htmlFor="record-address">
             <MapPin size={15} /> Primary Address & Building
           </label>
-          <div className="map-picker-inline">
-            <select
-              value={mapProvider}
-              onChange={(e) => handleProviderChange(e.target.value as MapProvider)}
-              className="map-select-compact"
-              aria-label="Map provider"
-            >
-              {Object.values(MAP_PROVIDERS).map((p) => (
-                <option key={p.id} value={p.id}>{p.badge}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="button secondary compact map-search-btn"
-              onClick={openMapSearch}
-              title={`Search location on ${MAP_PROVIDERS[mapProvider].label}`}
-            >
-              <Compass size={14} /> Search on {MAP_PROVIDERS[mapProvider].short} <ExternalLink size={12} />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="button secondary compact map-search-btn"
+            onClick={openMapSearch}
+            title="Preview location on Google Maps"
+          >
+            <Compass size={14} /> Preview on Maps
+          </button>
         </div>
 
         <input
@@ -215,7 +193,6 @@ export function RecordForm({ record, drivers, onSave, onCancel }: {
         <MapModal
           target={mapTarget}
           onClose={() => setMapTarget(null)}
-          onSelectPreferredMap={handleProviderChange}
         />
       )}
     </form>
@@ -232,7 +209,6 @@ export function AddressForm({ recordId, address, onSave, onCancel }: {
   const [error, setError] = useState("");
   const [addressLine1, setAddressLine1] = useState(address?.addressLine1 || "");
   const [islandCity, setIslandCity] = useState(address?.islandCity || "Malé");
-  const [mapProvider, setMapProvider] = useState<MapProvider>(getPreferredMap());
   const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
 
   const applyPreset = (prefix: string, island: string) => {
@@ -252,11 +228,6 @@ export function AddressForm({ recordId, address, onSave, onCancel }: {
       address: query,
       area: islandCity || "Malé",
     });
-  };
-
-  const handleProviderChange = (provider: MapProvider) => {
-    setMapProvider(provider);
-    setPreferredMap(provider);
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -291,26 +262,14 @@ export function AddressForm({ recordId, address, onSave, onCancel }: {
           <label htmlFor="address-line-1">
             <MapPin size={15} /> Address / House / Flat <span>*</span>
           </label>
-          <div className="map-picker-inline">
-            <select
-              value={mapProvider}
-              onChange={(e) => handleProviderChange(e.target.value as MapProvider)}
-              className="map-select-compact"
-              aria-label="Map provider"
-            >
-              {Object.values(MAP_PROVIDERS).map((p) => (
-                <option key={p.id} value={p.id}>{p.badge}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="button secondary compact map-search-btn"
-              onClick={openMapSearch}
-              title={`Search location on ${MAP_PROVIDERS[mapProvider].label}`}
-            >
-              <Compass size={14} /> Search on {MAP_PROVIDERS[mapProvider].short} <ExternalLink size={12} />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="button secondary compact map-search-btn"
+            onClick={openMapSearch}
+            title="Preview location on Google Maps"
+          >
+            <Compass size={14} /> Preview on Maps
+          </button>
         </div>
 
         <input
@@ -381,7 +340,6 @@ export function AddressForm({ recordId, address, onSave, onCancel }: {
         <MapModal
           target={mapTarget}
           onClose={() => setMapTarget(null)}
-          onSelectPreferredMap={handleProviderChange}
         />
       )}
     </form>

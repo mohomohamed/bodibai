@@ -21,12 +21,9 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
-  getPreferredMap,
-  MAP_PROVIDERS,
   type Address,
   type Driver,
   type DriverInput,
-  type MapProvider,
   type RecordInput,
   type RecordItem,
 } from "../types";
@@ -65,7 +62,6 @@ export function DispatchPanel({
   const [editingDriver, setEditingDriver] = useState<Driver | "new" | null>(null);
   const [selectedDriverId, setSelectedDriverId] = useState<string | "all" | "unassigned">("all");
   const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
-  const preferredMap = getPreferredMap();
 
   // Metrics
   const totalPortions = records.reduce((sum, r) => sum + (r.portions || 1), 0);

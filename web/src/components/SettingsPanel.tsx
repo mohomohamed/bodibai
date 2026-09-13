@@ -1,7 +1,7 @@
-import { Compass, Download, Edit3, FileSpreadsheet, LogOut, Plus, RefreshCw, ShieldCheck, Trash2, Truck, UploadCloud } from "lucide-react";
+import { Download, Edit3, FileSpreadsheet, LogOut, Plus, RefreshCw, ShieldCheck, Trash2, Truck, UploadCloud } from "lucide-react";
 import { useState } from "react";
 import { downloadExport } from "../api";
-import { getPreferredMap, MAP_PROVIDERS, setPreferredMap, type Driver, type DriverInput, type MapProvider, type SyncStatus } from "../types";
+import { type Driver, type DriverInput, type SyncStatus } from "../types";
 import { DriverForm } from "./Forms";
 import { ImportPanel } from "./ImportPanel";
 import { Modal } from "./Modal";
@@ -64,7 +64,7 @@ export function SettingsPanel({
         <div>
           <p className="eyebrow">App controls & Tools</p>
           <h1>Settings</h1>
-          <p>Manage fleet, data import/export, maps, and Cloudflare synchronization.</p>
+          <p>Manage fleet, data import/export, and Cloudflare synchronization.</p>
         </div>
       </div>
 
@@ -78,28 +78,6 @@ export function SettingsPanel({
             <button className="button secondary" onClick={() => void onLogout()}>
               <LogOut size={16} /> Sign out
             </button>
-          </div>
-        </article>
-
-        {/* Map Preference */}
-        <article className="card settings-card">
-          <div className="settings-icon"><Compass /></div>
-          <div>
-            <h2>Default Map App</h2>
-            <p className="settings-copy">Choose which map opens when searching addresses or launching navigation.</p>
-            <div className="field map-setting-field">
-              <select
-                value={getPreferredMap()}
-                onChange={(e) => {
-                  setPreferredMap(e.target.value as any);
-                  notify(`Default map set to ${MAP_PROVIDERS[e.target.value as keyof typeof MAP_PROVIDERS]?.label}`);
-                }}
-              >
-                {Object.values(MAP_PROVIDERS).map((p) => (
-                  <option key={p.id} value={p.id}>{p.badge} — {p.desc}</option>
-                ))}
-              </select>
-            </div>
           </div>
         </article>
 

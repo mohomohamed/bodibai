@@ -1,15 +1,11 @@
 import {
-  ArrowDownAZ, ChevronRight, CirclePlus, Compass, Edit3, ExternalLink, Mail, MapPin, Phone, Search, SlidersHorizontal, Trash2, UserRound,
+  ArrowDownAZ, ChevronRight, CirclePlus, Compass, Edit3, Mail, MapPin, Phone, Search, SlidersHorizontal, Trash2, UserRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
-  getPreferredMap,
-  MAP_PROVIDERS,
-  setPreferredMap,
   type Address,
   type AddressInput,
   type Driver,
-  type MapProvider,
   type RecordInput,
   type RecordItem,
 } from "../types";
@@ -45,16 +41,10 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
   const [sort, setSort] = useState<"updated" | "name">("updated"), [filtersOpen, setFiltersOpen] = useState(false);
   const [editing, setEditing] = useState<RecordItem | "new" | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
   const [addressEdit, setAddressEdit] = useState<{ recordId: string; address?: Address } | null>(null);
-  const [mapProvider, setMapProvider] = useState<MapProvider>(getPreferredMap());
   const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
 
   const selected = records.find((record) => record.id === selectedId);
   const areas = useMemo(() => [...new Set(records.map((record) => record.area).filter(Boolean))].sort(), [records]);
-
-  const handleProviderChange = (provider: MapProvider) => {
-    setMapProvider(provider);
-    setPreferredMap(provider);
-  };
 
   const openMapModal = (target: MapModalTarget, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -257,7 +247,7 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
                         notes: record.notes,
                       }, e)}
                     >
-                      <Compass size={13} /> {MAP_PROVIDERS[mapProvider].short}
+                      <Compass size={13} /> Map
                     </button>
                   )}
                 </span>
@@ -382,8 +372,7 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
                 <p>{query}</p>
                 {address.notes && <small>{address.notes}</small>}
                 <div className="address-map-bar">
-                  <span className="map-search-label">Location on Map:</span>
-                  <div className="map-buttons-group">
+                  <div className="address-map-bar">
                     <button
                       type="button"
                       className="button secondary compact map-action-chip"
@@ -396,29 +385,10 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
                         status: selected.deliveryStatus,
                         notes: address.notes || selected.notes,
                       })}
-                      title="Open in-app map preview"
+                      title="Open in-app Google Maps preview"
                     >
-                      <Compass size={13} /> View Map Preview
+                      <Compass size={13} /> Preview on Maps
                     </button>
-                    {Object.values(MAP_PROVIDERS).map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className="button secondary compact map-action-chip"
-                        onClick={() => openMapModal({
-                          title: selected.name,
-                          address: query,
-                          area: address.islandCity || selected.area,
-                          phone: selected.phone,
-                          portions: selected.portions,
-                          status: selected.deliveryStatus,
-                          notes: address.notes || selected.notes,
-                        })}
-                        title={`Open location on ${p.label}`}
-                      >
-                        {p.badge} <ExternalLink size={11} />
-                      </button>
-                    ))}
                   </div>
                 </div>
               </div>
@@ -458,7 +428,6 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
       <MapModal
         target={mapTarget}
         onClose={() => setMapTarget(null)}
-        onSelectPreferredMap={handleProviderChange}
       />
     )}
   </>;

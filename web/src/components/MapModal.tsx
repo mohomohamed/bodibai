@@ -3,15 +3,13 @@ import {
   Compass,
   Copy,
   ExternalLink,
-  Globe,
   MapPin,
   MessageSquare,
-  Navigation,
   Phone,
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { getPreferredMap, MAP_PROVIDERS, setPreferredMap, type MapProvider } from "../types";
+import { getGoogleMapsEmbedUrl, getGoogleMapsUrl } from "../types";
 
 export interface MapModalTarget {
   title: string;
@@ -26,7 +24,6 @@ export interface MapModalTarget {
 interface Props {
   target: MapModalTarget | null;
   onClose: () => void;
-  onSelectPreferredMap?: (provider: MapProvider) => void;
 }
 
 function cleanMaldivesPhone(phone?: string): string {
@@ -37,18 +34,17 @@ function cleanMaldivesPhone(phone?: string): string {
   return digits;
 }
 
-export function MapModal({ target, onClose, onSelectPreferredMap }: Props) {
+export function MapModal({ target, onClose }: Props) {
   const [copied, setCopied] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<MapProvider>(getPreferredMap());
 
   if (!target) return null;
 
   const address = (target.address || "").trim();
   const area = target.area || "Malé";
   const query = address ? (address.toLowerCase().includes(area.toLowerCase()) ? address : `${address}, ${area}`) : `${target.title}, ${area}`;
-  const encodedQuery = encodeURIComponent(`${query} Maldives`);
-  const embedUrl = `https://maps.google.com/maps?q=${encodedQuery}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
+  const embedUrl = getGoogleMapsEmbedUrl(query);
+  const googleMapsUrl = getGoogleMapsUrl(query);
 
   const cleanPhone = cleanMaldivesPhone(target.phone);
   const waUrl = cleanPhone
@@ -62,7 +58,7 @@ export function MapModal({ target, onClose, onSelectPreferredMap }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // ignore clipboard error
+      // ignore
     }
   };
 
@@ -73,19 +69,12 @@ export function MapModal({ target, onClose, onSelectPreferredMap }: Props) {
       setCopiedPhone(true);
       setTimeout(() => setCopiedPhone(false), 2000);
     } catch {
-      // ignore clipboard error
+      // ignore
     }
   };
 
-  const launchMap = (providerKey: MapProvider) => {
-    const url = MAP_PROVIDERS[providerKey].getUrl(query);
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const handleSetPreferred = (p: MapProvider) => {
-    setSelectedProvider(p);
-    setPreferredMap(p);
-    if (onSelectPreferredMap) onSelectPreferredMap(p);
+  const launchGoogleMaps = () => {
+    window.open(googleMapsUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -148,7 +137,7 @@ export function MapModal({ target, onClose, onSelectPreferredMap }: Props) {
             )}
           </div>
 
-          {/* Phone & Quick Contact Row */}
+          {/* Phone & Contact Row */}
           {target.phone && (
             <div className="map-modal-contact-row">
               <span className="contact-phone">📞 {target.phone}</span>
@@ -185,16 +174,16 @@ export function MapModal({ target, onClose, onSelectPreferredMap }: Props) {
             </div>
           )}
 
-          {/* Live In-Modal Map Preview */}
+          {/* Live In-Modal Google Map Preview */}
           <div className="map-modal-preview">
             <div className="preview-top-bar">
               <span className="preview-label">
-                <Compass size={14} /> Live Map Preview
+                <Compass size={14} /> Google Maps Preview
               </span>
-              <span className="preview-badge">Interactive</span>
+              <span className="preview-badge">Live View</span>
             </div>
             <iframe
-              title={`Map preview for ${target.title}`}
+              title={`Google Map preview for ${target.title}`}
               src={embedUrl}
               className="map-modal-iframe"
               loading="lazy"
@@ -202,101 +191,16 @@ export function MapModal({ target, onClose, onSelectPreferredMap }: Props) {
             />
           </div>
 
-          {/* External Map Launch Section */}
+          {/* Primary Action Button */}
           <div className="map-modal-launcher-section">
-            <div className="launcher-header">
-              <h3>Open in Map App / Web</h3>
-              <p>Navigate directly in your preferred map</p>
-            </div>
-
-            {/* Primary Large Button */}
             <button
               type="button"
               className="button primary map-modal-primary-btn"
-              onClick={() => launchMap(selectedProvider)}
+              onClick={launchGoogleMaps}
             >
-              <span>Open in {MAP_PROVIDERS[selectedProvider].label}</span>
+              <span>Open in Google Maps 📍</span>
               <ExternalLink size={16} />
             </button>
-
-            {/* 4-Grid Provider Selector */}
-            <div className="map-modal-provider-grid">
-              {/* Eatolls */}
-              <button
-                type="button"
-                className={`provider-card provider-eatolls ${selectedProvider === "eatolls" ? "selected" : ""}`}
-                onClick={() => {
-                  handleSetPreferred("eatolls");
-                  launchMap("eatolls");
-                }}
-              >
-                <div className="provider-card-icon">
-                  <Globe size={20} />
-                </div>
-                <div className="provider-card-info">
-                  <strong>Eatolls 🇲🇻</strong>
-                  <small>Maldives House Names</small>
-                </div>
-                <ExternalLink size={13} className="ext-icon" />
-              </button>
-
-              {/* Google Maps */}
-              <button
-                type="button"
-                className={`provider-card provider-google ${selectedProvider === "google" ? "selected" : ""}`}
-                onClick={() => {
-                  handleSetPreferred("google");
-                  launchMap("google");
-                }}
-              >
-                <div className="provider-card-icon">
-                  <Compass size={20} />
-                </div>
-                <div className="provider-card-info">
-                  <strong>Google Maps 📍</strong>
-                  <small>Turn-by-turn Navigation</small>
-                </div>
-                <ExternalLink size={13} className="ext-icon" />
-              </button>
-
-              {/* Apple Maps */}
-              <button
-                type="button"
-                className={`provider-card provider-apple ${selectedProvider === "apple" ? "selected" : ""}`}
-                onClick={() => {
-                  handleSetPreferred("apple");
-                  launchMap("apple");
-                }}
-              >
-                <div className="provider-card-icon">
-                  <Navigation size={20} />
-                </div>
-                <div className="provider-card-info">
-                  <strong>Apple Maps 🍏</strong>
-                  <small>iOS & macOS Native</small>
-                </div>
-                <ExternalLink size={13} className="ext-icon" />
-              </button>
-
-              {/* Waze */}
-              <button
-                type="button"
-                className={`provider-card provider-waze ${selectedProvider === "waze" ? "selected" : ""}`}
-                onClick={() => {
-                  handleSetPreferred("waze");
-                  launchMap("waze");
-                }}
-              >
-                <div className="provider-card-icon">
-                  <Navigation size={20} />
-                </div>
-                <div className="provider-card-info">
-                  <strong>Waze 🚗</strong>
-                  <small>Traffic & Driving</small>
-                </div>
-                <ExternalLink size={13} className="ext-icon" />
-              </button>
-            </div>
           </div>
         </div>
       </div>
