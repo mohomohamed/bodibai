@@ -63,15 +63,6 @@ CREATE TABLE IF NOT EXISTS sessions (
   last_seen_at INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
-  id TEXT PRIMARY KEY,
-  token_hash TEXT UNIQUE NOT NULL,
-  user_name TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL,
-  last_seen_at INTEGER
-);
-
 CREATE INDEX IF NOT EXISTS idx_records_name ON records(name);
 CREATE INDEX IF NOT EXISTS idx_records_phone ON records(phone);
 CREATE INDEX IF NOT EXISTS idx_records_updated_at ON records(updated_at);
