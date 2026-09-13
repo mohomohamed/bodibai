@@ -29,6 +29,7 @@ function addressText(address?: Address): string {
 interface Props {
   records: RecordItem[];
   drivers: Driver[];
+  groups?: string[];
   saveRecord: (value: RecordInput, editing: boolean) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
   saveAddress: (value: AddressInput, editing: boolean) => Promise<void>;
@@ -36,15 +37,14 @@ interface Props {
   notify: (message: string) => void;
 }
 
-export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveAddress, deleteAddress, notify }: Props) {
-  const [query, setQuery] = useState(""), [area, setArea] = useState("all"), [status, setStatus] = useState("all");
+export function RecordsPanel({ records, drivers, groups = [], saveRecord, deleteRecord, saveAddress, deleteAddress, notify }: Props) {
+  const [query, setQuery] = useState(""), [area, setArea] = useState("all"), [status, setStatus] = useState("all"), [groupFilter, setGroupFilter] = useState("all");
   const [sort, setSort] = useState<"updated" | "name">("updated"), [filtersOpen, setFiltersOpen] = useState(false);
   const [editing, setEditing] = useState<RecordItem | "new" | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
   const [addressEdit, setAddressEdit] = useState<{ recordId: string; address?: Address } | null>(null);
   const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
 
   const selected = records.find((record) => record.id === selectedId);
-  const areas = useMemo(() => [...new Set(records.map((record) => record.area).filter(Boolean))].sort(), [records]);
 
   const openMapModal = (target: MapModalTarget, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -56,9 +56,13 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
     return records.filter((record) => {
       const searchable = [record.name, record.phone, record.email, record.category, record.groupName, record.area, record.notes,
         ...record.addresses.flatMap((address) => [address.addressLine1, address.addressLine2, address.islandCity, address.atollRegion, address.notes])].join(" ").toLowerCase();
-      return (!normalized || searchable.includes(normalized)) && (area === "all" || record.area === area) && (status === "all" || record.deliveryStatus === status);
+      const matchesQuery = !normalized || searchable.includes(normalized);
+      const matchesArea = area === "all" || record.area === area;
+      const matchesStatus = status === "all" || record.deliveryStatus === status;
+      const matchesGroup = groupFilter === "all" || (record.groupName && record.groupName.trim() === groupFilter);
+      return matchesQuery && matchesArea && matchesStatus && matchesGroup;
     }).sort((left, right) => sort === "name" ? left.name.localeCompare(right.name) : right.updatedAt - left.updatedAt);
-  }, [area, query, records, sort, status]);
+  }, [area, groupFilter, query, records, sort, status]);
 
   const removeRecord = async (record: RecordItem) => {
     if (!window.confirm(`Delete ${record.name}? This can be recovered from the D1 database if needed.`)) return;
@@ -151,7 +155,7 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, phone, address, group…" />
       </label>
       <button className={`button filter-button ${filtersOpen ? "active" : ""}`} onClick={() => setFiltersOpen(!filtersOpen)}>
-        <SlidersHorizontal size={17} />Filters{status !== "all" && <span className="filter-dot" />}
+        <SlidersHorizontal size={17} />Filters{(status !== "all" || groupFilter !== "all") && <span className="filter-dot" />}
       </button>
       <button className="button filter-button" onClick={() => setSort(sort === "updated" ? "name" : "updated")}>
         <ArrowDownAZ size={17} />{sort === "updated" ? "Recent" : "Name"}
@@ -167,14 +171,23 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
             <option value="paused">Paused</option>
           </select>
         </label>
-        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); }}>Clear filters</button>
+        <label>Group / Family
+          <select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)}>
+            <option value="all">All groups ({records.length})</option>
+            {groups.map((g) => {
+              const count = records.filter((r) => (r.groupName || "").trim() === g).length;
+              return <option key={g} value={g}>{g} ({count})</option>;
+            })}
+          </select>
+        </label>
+        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); setGroupFilter("all"); }}>Clear filters</button>
       </div>}
     </section>
 
     <div className="list-meta">
       <span>{filtered.length} shown ({filtered.reduce((sum, item) => sum + item.portions, 0)} portions)</span>
-      {(query || area !== "all" || status !== "all") && (
-        <button className="text-button" onClick={() => { setQuery(""); setArea("all"); setStatus("all"); }}>
+      {(query || area !== "all" || status !== "all" || groupFilter !== "all") && (
+        <button className="text-button" onClick={() => { setQuery(""); setArea("all"); setStatus("all"); setGroupFilter("all"); }}>
           Reset filters
         </button>
       )}
@@ -320,6 +333,7 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
       <RecordForm
         record={editing === "new" ? undefined : editing}
         drivers={drivers}
+        groups={groups}
         onCancel={() => setEditing(null)}
         onSave={handleSaveRecord}
       />
@@ -335,7 +349,7 @@ export function RecordsPanel({ records, drivers, saveRecord, deleteRecord, saveA
         <span className={`status-chip status-${selected.deliveryStatus}`}>{selected.deliveryStatus.replaceAll("-", " ")}</span>
       </div>
       <div className="detail-actions">
-        <button className="button secondary" onClick={() => setEditing(selected)}><Edit3 size={16} />Edit</button>
+        <button className="button secondary" onClick={() => { setSelectedId(null); setEditing(selected); }}><Edit3 size={16} />Edit</button>
         <button className="button danger-ghost" onClick={() => void removeRecord(selected)}><Trash2 size={16} />Delete</button>
       </div>
       <dl className="detail-grid">

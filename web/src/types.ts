@@ -103,3 +103,14 @@ export const MALDIVES_PRESETS = [
   { label: "Vinares", prefix: "Vinares Flat V", island: "Hulhumalé", desc: "Vinares Tower" },
   { label: "Villimalé", prefix: "Villimalé, ", island: "Villimalé", desc: "Villimalé" },
 ] as const;
+
+export const DEFAULT_GROUPS = [
+  "Shaufa Family",
+  "Shaufa Family Friend",
+  "Moho Friends",
+  "Shaufa Friends",
+  "Moho Kaafa Family",
+  "Moho Maama Family",
+  "Moho Neighbours",
+] as const;
+

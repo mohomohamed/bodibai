@@ -13,9 +13,10 @@ import { MapModal, type MapModalTarget } from "./MapModal";
 
 const input = (form: FormData, key: string) => String(form.get(key) || "").trim();
 
-export function RecordForm({ record, drivers, onSave, onCancel }: {
+export function RecordForm({ record, drivers, groups = [], onSave, onCancel }: {
   record?: RecordItem;
   drivers: Driver[];
+  groups?: string[];
   onSave: (value: RecordInput, addressLine1?: string) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -135,7 +136,15 @@ export function RecordForm({ record, drivers, onSave, onCancel }: {
         </div>
         <div className="field">
           <label htmlFor="record-group">Group / Family</label>
-          <input id="record-group" name="groupName" placeholder="e.g. Moho Friends" defaultValue={record?.groupName} />
+          <select id="record-group" name="groupName" defaultValue={record?.groupName || (groups.length ? groups[0] : "")}>
+            <option value="">No Group (General)</option>
+            {groups.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+            {record?.groupName && !groups.includes(record.groupName) && (
+              <option value={record.groupName}>{record.groupName} (Legacy)</option>
+            )}
+          </select>
         </div>
         <div className="field">
           <label htmlFor="record-portions">Portions</label>
@@ -418,4 +427,67 @@ export function DriverForm({ driver, onSave, onCancel }: { driver?: Driver; onSa
     </form>
   );
 }
+
+export function GroupForm({
+  group,
+  onSave,
+  onCancel,
+}: {
+  group?: string;
+  onSave: (name: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const name = input(data, "name");
+    if (!name) {
+      setError("Please enter a group name.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(name);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save group.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="form-stack">
+      <div className="field">
+        <label htmlFor="group-name">
+          Group / Family Name <span>*</span>
+        </label>
+        <input
+          id="group-name"
+          name="name"
+          defaultValue={group}
+          placeholder="e.g. Shaufa Family / Moho Friends"
+          required
+          autoFocus
+        />
+        <p className="field-hint">
+          This group will be available for all household records and filterable in the directory.
+        </p>
+      </div>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <div className="form-actions">
+        <button type="button" className="button secondary" onClick={onCancel}>
+          Cancel
+        </button>
+        <button className="button primary" disabled={saving}>
+          {saving ? "Saving…" : group ? "Update group" : "Create group"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 

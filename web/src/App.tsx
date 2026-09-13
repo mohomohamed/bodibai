@@ -7,6 +7,7 @@ import { Login } from "./components/Login";
 import { RecordsPanel } from "./components/RecordsPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SyncBadge } from "./components/SyncBadge";
+import { DEFAULT_GROUPS } from "./types";
 import { useSync } from "./useSync";
 
 interface SessionState { token: string; userName: string }
@@ -18,10 +19,60 @@ function LoadingScreen() {
 
 function AuthenticatedApp({ session, endSession }: { session: SessionState; endSession: (remote: boolean) => Promise<void> }) {
   const [page, setPage] = useState<Page>("records"), [menuOpen, setMenuOpen] = useState(false), [toast, setToast] = useState("");
+  const [groups, setGroups] = useState<string[]>([...DEFAULT_GROUPS]);
   const expired = useCallback(() => { void endSession(false); }, [endSession]);
   const sync = useSync({ token: session.token, userName: session.userName, onSessionExpired: expired });
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2800); };
   const navigate = (next: Page) => { setPage(next); setMenuOpen(false); };
+
+  // Load custom groups from storage, or seed from DEFAULT_GROUPS + existing record groups
+  useEffect(() => {
+    void (async () => {
+      const stored = await getSetting<string[]>("groups");
+      if (stored && Array.isArray(stored) && stored.length > 0) {
+        setGroups(stored);
+      } else {
+        const set = new Set<string>(DEFAULT_GROUPS);
+        sync.records.forEach((r) => {
+          const g = (r.groupName || "").trim();
+          if (g) set.add(g);
+        });
+        const initial = Array.from(set).sort((a, b) => a.localeCompare(b));
+        setGroups(initial);
+        await saveSetting("groups", initial);
+      }
+    })();
+  }, [sync.records.length]);
+
+  const saveGroup = async (name: string, oldName?: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    let next: string[];
+    if (oldName) {
+      next = groups.map((g) => (g === oldName ? trimmed : g));
+      // Cascade rename to matching records
+      const matching = sync.records.filter((r) => (r.groupName || "").trim() === oldName);
+      for (const record of matching) {
+        await sync.saveRecord({ ...record, groupName: trimmed }, true);
+      }
+    } else {
+      if (groups.includes(trimmed)) return;
+      next = [...groups, trimmed].sort((a, b) => a.localeCompare(b));
+    }
+    setGroups(next);
+    await saveSetting("groups", next);
+  };
+
+  const deleteGroup = async (name: string) => {
+    const next = groups.filter((g) => g !== name);
+    setGroups(next);
+    await saveSetting("groups", next);
+    // Cascade reset to matching records
+    const matching = sync.records.filter((r) => (r.groupName || "").trim() === name);
+    for (const record of matching) {
+      await sync.saveRecord({ ...record, groupName: "" }, true);
+    }
+  };
 
   return <div className="app-shell">
     <header className="topbar">
@@ -42,9 +93,9 @@ function AuthenticatedApp({ session, endSession }: { session: SessionState; endS
     <main className="main-content">
       {sync.status === "offline" && <div className="offline-banner">You’re offline. Changes stay on this device and will sync automatically.{sync.pendingCount ? ` ${sync.pendingCount} waiting.` : ""}</div>}
       {sync.status === "issue" && <div className="offline-banner issue">Sync needs attention: {sync.syncError || "a pending change could not be sent."}</div>}
-      {page === "records" && <RecordsPanel records={sync.records} drivers={sync.drivers} saveRecord={sync.saveRecord} deleteRecord={sync.deleteRecord} saveAddress={sync.saveAddress} deleteAddress={sync.deleteAddress} notify={notify} />}
+      {page === "records" && <RecordsPanel records={sync.records} drivers={sync.drivers} groups={groups} saveRecord={sync.saveRecord} deleteRecord={sync.deleteRecord} saveAddress={sync.saveAddress} deleteAddress={sync.deleteAddress} notify={notify} />}
       {page === "dispatch" && <DispatchPanel records={sync.records} drivers={sync.drivers} saveRecord={sync.saveRecord} saveDriver={sync.saveDriver} deleteDriver={sync.deleteDriver} notify={notify} />}
-      {page === "settings" && <SettingsPanel token={session.token} userName={session.userName} drivers={sync.drivers} status={sync.status} pendingCount={sync.pendingCount} syncError={sync.syncError} onSync={sync.syncNow} onLogout={() => endSession(true)} onSaveDriver={sync.saveDriver} onDeleteDriver={sync.deleteDriver} onImport={sync.importRows} notify={notify} />}
+      {page === "settings" && <SettingsPanel token={session.token} userName={session.userName} drivers={sync.drivers} groups={groups} records={sync.records} status={sync.status} pendingCount={sync.pendingCount} syncError={sync.syncError} onSync={sync.syncNow} onLogout={() => endSession(true)} onSaveDriver={sync.saveDriver} onDeleteDriver={sync.deleteDriver} onSaveGroup={saveGroup} onDeleteGroup={deleteGroup} onImport={sync.importRows} notify={notify} />}
     </main>
     <nav className="mobile-nav" aria-label="Mobile navigation">
       <button className={page === "records" ? "active" : ""} onClick={() => navigate("records")}><List />Records</button>

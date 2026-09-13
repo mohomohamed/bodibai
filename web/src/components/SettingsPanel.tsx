@@ -1,8 +1,8 @@
-import { Download, Edit3, FileSpreadsheet, LogOut, Plus, RefreshCw, ShieldCheck, Trash2, Truck, UploadCloud } from "lucide-react";
+import { Download, Edit3, FileSpreadsheet, LogOut, Plus, RefreshCw, ShieldCheck, Trash2, Truck, UploadCloud, Users } from "lucide-react";
 import { useState } from "react";
 import { downloadExport } from "../api";
-import { type Driver, type DriverInput, type SyncStatus } from "../types";
-import { DriverForm } from "./Forms";
+import { type Driver, type DriverInput, type RecordItem, type SyncStatus } from "../types";
+import { DriverForm, GroupForm } from "./Forms";
 import { ImportPanel } from "./ImportPanel";
 import { Modal } from "./Modal";
 import { SyncBadge } from "./SyncBadge";
@@ -11,6 +11,8 @@ export function SettingsPanel({
   token,
   userName,
   drivers,
+  groups = [],
+  records = [],
   status,
   pendingCount,
   syncError,
@@ -18,12 +20,16 @@ export function SettingsPanel({
   onLogout,
   onSaveDriver,
   onDeleteDriver,
+  onSaveGroup,
+  onDeleteGroup,
   onImport,
   notify,
 }: {
   token: string;
   userName: string;
   drivers: Driver[];
+  groups?: string[];
+  records?: RecordItem[];
   status: SyncStatus;
   pendingCount: number;
   syncError: string;
@@ -31,10 +37,13 @@ export function SettingsPanel({
   onLogout: () => Promise<void>;
   onSaveDriver: (driver: DriverInput, editing: boolean) => Promise<void>;
   onDeleteDriver: (id: string) => Promise<void>;
+  onSaveGroup: (name: string, oldName?: string) => Promise<void>;
+  onDeleteGroup: (name: string) => Promise<void>;
   onImport: (rows: Record<string, unknown>[]) => Promise<any>;
   notify: (message: string) => void;
 }) {
   const [editing, setEditing] = useState<Driver | "new" | null>(null);
+  const [groupEditing, setGroupEditing] = useState<string | "new" | null>(null);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
   const [importOpen, setImportOpen] = useState(false);
@@ -56,6 +65,16 @@ export function SettingsPanel({
     if (!window.confirm(`Delete driver ${driver.name}? Existing records will become unassigned.`)) return;
     await onDeleteDriver(driver.id);
     notify("Driver deleted");
+  };
+
+  const removeGroup = async (group: string) => {
+    const matchingCount = records.filter((r) => (r.groupName || "").trim() === group).length;
+    const msg = matchingCount
+      ? `Delete group "${group}"? ${matchingCount} assigned household${matchingCount === 1 ? "" : "s"} will have their group reset.`
+      : `Delete group "${group}"?`;
+    if (!window.confirm(msg)) return;
+    await onDeleteGroup(group);
+    notify("Group deleted");
   };
 
   return (
@@ -158,6 +177,45 @@ export function SettingsPanel({
         </div>
       </section>
 
+      {/* Distribution Groups & Families Management */}
+      <section className="card drivers-card">
+        <div className="section-title">
+          <div>
+            <h2>Distribution Groups & Families ({groups.length})</h2>
+            <p>Manage family groups and categories for distribution directory filtering.</p>
+          </div>
+          <button className="button primary compact" onClick={() => setGroupEditing("new")}>
+            <Plus size={16} /> Add group
+          </button>
+        </div>
+        <div className="driver-list">
+          {groups.map((group) => {
+            const matchingRecords = records.filter((r) => (r.groupName || "").trim() === group);
+            const totalPortions = matchingRecords.reduce((sum, r) => sum + r.portions, 0);
+            return (
+              <article key={group}>
+                <div className="driver-avatar"><Users /></div>
+                <div>
+                  <h3>{group}</h3>
+                  <p>
+                    {matchingRecords.length} household{matchingRecords.length === 1 ? "" : "s"} · {totalPortions} portion{totalPortions === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <div className="inline-actions">
+                  <button className="icon-button" aria-label={`Edit ${group}`} onClick={() => setGroupEditing(group)}>
+                    <Edit3 size={16} />
+                  </button>
+                  <button className="icon-button danger" aria-label={`Delete ${group}`} onClick={() => void removeGroup(group)}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {!groups.length && <p className="subtle-empty">No groups configured yet.</p>}
+        </div>
+      </section>
+
       {/* Driver Edit Modal */}
       {editing && (
         <Modal title={editing === "new" ? "Add driver" : "Edit driver"} onClose={() => setEditing(null)}>
@@ -168,6 +226,21 @@ export function SettingsPanel({
               await onSaveDriver(value, editing !== "new");
               setEditing(null);
               notify(editing === "new" ? "Driver added" : "Driver updated");
+            }}
+          />
+        </Modal>
+      )}
+
+      {/* Group Edit Modal */}
+      {groupEditing && (
+        <Modal title={groupEditing === "new" ? "Add group" : "Edit group"} onClose={() => setGroupEditing(null)}>
+          <GroupForm
+            group={groupEditing === "new" ? undefined : groupEditing}
+            onCancel={() => setGroupEditing(null)}
+            onSave={async (name) => {
+              await onSaveGroup(name, groupEditing === "new" ? undefined : groupEditing);
+              setGroupEditing(null);
+              notify(groupEditing === "new" ? "Group created" : "Group updated");
             }}
           />
         </Modal>
