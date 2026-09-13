@@ -712,6 +712,22 @@ a { color: inherit; text-decoration: none; }
 .red-dot { background: #e11d48; }
 .cyan-dot { background: #0891b2; }
 .green-dot { background: #059669; }
+.warning-dot { background: #ea580c; }
+
+.pill-missing-address:hover {
+  border-color: #fb923c;
+  background: #fff7ed;
+}
+.pill-missing-address.active {
+  background: #c2410c;
+  border-color: #c2410c;
+  color: white;
+  box-shadow: 0 4px 12px rgba(194, 65, 12, 0.25);
+}
+.pill-missing-address.active .pill-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
 
 .pill-count {
   padding: 1px 6px;

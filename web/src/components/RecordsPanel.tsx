@@ -26,6 +26,11 @@ function addressText(address?: Address): string {
   return [address.addressLine1, address.addressLine2, address.islandCity, address.atollRegion].filter(Boolean).join(", ") || "Address details not entered";
 }
 
+function hasRecordAddress(record: RecordItem): boolean {
+  const primary = record.addresses.find((item) => item.isPrimary) || record.addresses[0];
+  return Boolean(primary?.addressLine1?.trim());
+}
+
 interface Props {
   records: RecordItem[];
   drivers: Driver[];
@@ -39,6 +44,7 @@ interface Props {
 
 export function RecordsPanel({ records, drivers, groups = [], saveRecord, deleteRecord, saveAddress, deleteAddress, notify }: Props) {
   const [query, setQuery] = useState(""), [area, setArea] = useState("all"), [status, setStatus] = useState("all"), [groupFilter, setGroupFilter] = useState("all");
+  const [addressFilter, setAddressFilter] = useState<"all" | "missing" | "assigned">("all");
   const [sort, setSort] = useState<"updated" | "name">("updated"), [filtersOpen, setFiltersOpen] = useState(false);
   const [editing, setEditing] = useState<RecordItem | "new" | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
   const [addressEdit, setAddressEdit] = useState<{ recordId: string; address?: Address } | null>(null);
@@ -60,9 +66,13 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
       const matchesArea = area === "all" || record.area === area;
       const matchesStatus = status === "all" || record.deliveryStatus === status;
       const matchesGroup = groupFilter === "all" || (record.groupName && record.groupName.trim() === groupFilter);
-      return matchesQuery && matchesArea && matchesStatus && matchesGroup;
+      const matchesAddress =
+        addressFilter === "all" ||
+        (addressFilter === "missing" && !hasRecordAddress(record)) ||
+        (addressFilter === "assigned" && hasRecordAddress(record));
+      return matchesQuery && matchesArea && matchesStatus && matchesGroup && matchesAddress;
     }).sort((left, right) => sort === "name" ? left.name.localeCompare(right.name) : right.updatedAt - left.updatedAt);
-  }, [area, groupFilter, query, records, sort, status]);
+  }, [addressFilter, area, groupFilter, query, records, sort, status]);
 
   const removeRecord = async (record: RecordItem) => {
     if (!window.confirm(`Delete ${record.name}? This can be recovered from the D1 database if needed.`)) return;
@@ -104,6 +114,9 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
     notify(isNew ? "Record added" : "Changes saved");
   };
 
+  const noAddressCount = useMemo(() => records.filter((r) => !hasRecordAddress(r)).length, [records]);
+  const hasAddressCount = records.length - noAddressCount;
+
   return <>
     <div className="page-heading records-heading">
       <div><p className="eyebrow">Shared directory</p><h1>Records</h1><p>{records.length} record{records.length === 1 ? "" : "s"} · {records.reduce((sum, item) => sum + item.portions, 0)} portions</p></div>
@@ -113,8 +126,8 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
     <div className="island-pill-bar">
       <button
         type="button"
-        className={`island-pill ${area === "all" ? "active" : ""}`}
-        onClick={() => setArea("all")}
+        className={`island-pill ${area === "all" && addressFilter === "all" ? "active" : ""}`}
+        onClick={() => { setArea("all"); setAddressFilter("all"); }}
       >
         <span>All</span>
         <span className="pill-count">{records.length}</span>
@@ -146,6 +159,16 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
         <span>Villimalé</span>
         <span className="pill-count">{records.filter((r) => r.area === "Villimalé").length}</span>
       </button>
+      <button
+        type="button"
+        className={`island-pill pill-missing-address ${addressFilter === "missing" ? "active" : ""}`}
+        onClick={() => setAddressFilter(addressFilter === "missing" ? "all" : "missing")}
+        title="Filter households with no address assigned"
+      >
+        <span className="pill-dot warning-dot" />
+        <span>No Address</span>
+        <span className="pill-count">{noAddressCount}</span>
+      </button>
     </div>
 
     <section className="toolbar card">
@@ -155,12 +178,19 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, phone, address, group…" />
       </label>
       <button className={`button filter-button ${filtersOpen ? "active" : ""}`} onClick={() => setFiltersOpen(!filtersOpen)}>
-        <SlidersHorizontal size={17} />Filters{(status !== "all" || groupFilter !== "all") && <span className="filter-dot" />}
+        <SlidersHorizontal size={17} />Filters{(status !== "all" || groupFilter !== "all" || addressFilter !== "all") && <span className="filter-dot" />}
       </button>
       <button className="button filter-button" onClick={() => setSort(sort === "updated" ? "name" : "updated")}>
         <ArrowDownAZ size={17} />{sort === "updated" ? "Recent" : "Name"}
       </button>
       {filtersOpen && <div className="filter-row">
+        <label>Address Status
+          <select value={addressFilter} onChange={(event) => setAddressFilter(event.target.value as "all" | "missing" | "assigned")}>
+            <option value="all">All records ({records.length})</option>
+            <option value="missing">⚠️ No address assigned ({noAddressCount})</option>
+            <option value="assigned">✅ Has address ({hasAddressCount})</option>
+          </select>
+        </label>
         <label>Delivery Status
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="all">All statuses</option>
@@ -180,14 +210,14 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
             })}
           </select>
         </label>
-        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); setGroupFilter("all"); }}>Clear filters</button>
+        <button className="text-button" onClick={() => { setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); }}>Clear filters</button>
       </div>}
     </section>
 
     <div className="list-meta">
       <span>{filtered.length} shown ({filtered.reduce((sum, item) => sum + item.portions, 0)} portions)</span>
-      {(query || area !== "all" || status !== "all" || groupFilter !== "all") && (
-        <button className="text-button" onClick={() => { setQuery(""); setArea("all"); setStatus("all"); setGroupFilter("all"); }}>
+      {(query || area !== "all" || status !== "all" || groupFilter !== "all" || addressFilter !== "all") && (
+        <button className="text-button" onClick={() => { setQuery(""); setArea("all"); setStatus("all"); setGroupFilter("all"); setAddressFilter("all"); }}>
           Reset filters
         </button>
       )}
