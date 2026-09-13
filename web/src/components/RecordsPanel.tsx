@@ -35,6 +35,7 @@ interface Props {
   records: RecordItem[];
   drivers: Driver[];
   groups?: string[];
+  isAdmin?: boolean;
   saveRecord: (value: RecordInput, editing: boolean) => Promise<void>;
   deleteRecord: (id: string) => Promise<void>;
   saveAddress: (value: AddressInput, editing: boolean) => Promise<void>;
@@ -42,7 +43,7 @@ interface Props {
   notify: (message: string) => void;
 }
 
-export function RecordsPanel({ records, drivers, groups = [], saveRecord, deleteRecord, saveAddress, deleteAddress, notify }: Props) {
+export function RecordsPanel({ records, drivers, groups = [], isAdmin = false, saveRecord, deleteRecord, saveAddress, deleteAddress, notify }: Props) {
   const [query, setQuery] = useState(""), [area, setArea] = useState("all"), [status, setStatus] = useState("all"), [groupFilter, setGroupFilter] = useState("all");
   const [addressFilter, setAddressFilter] = useState<"all" | "missing" | "assigned">("all");
   const [deliveryMethodFilter, setDeliveryMethodFilter] = useState<"all" | "self-pickup" | "delivery">("all");
@@ -50,6 +51,42 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
   const [editing, setEditing] = useState<RecordItem | "new" | null>(null), [selectedId, setSelectedId] = useState<string | null>(null);
   const [addressEdit, setAddressEdit] = useState<{ recordId: string; address?: Address } | null>(null);
   const [mapTarget, setMapTarget] = useState<MapModalTarget | null>(null);
+  const [updatingDriver, setUpdatingDriver] = useState(false);
+
+  const handleQuickChangeDriver = async (record: RecordItem, newDriverId: string) => {
+    try {
+      setUpdatingDriver(true);
+      await saveRecord(
+        {
+          id: record.id,
+          name: record.name,
+          phone: record.phone,
+          email: record.email,
+          category: record.category,
+          groupName: record.groupName,
+          area: record.area,
+          portions: record.portions,
+          deliveryStatus: record.deliveryStatus,
+          driverId: newDriverId,
+          status: record.status,
+          notes: record.notes,
+        },
+        true
+      );
+      if (newDriverId === "self-pickup" || newDriverId === "pickup") {
+        notify("Assigned to Self Pick Up 🚶");
+      } else if (newDriverId) {
+        const d = drivers.find((item) => item.id === newDriverId);
+        notify(`Driver assigned to ${d?.name || "Driver"} 🛵`);
+      } else {
+        notify("Household unassigned");
+      }
+    } catch {
+      notify("Failed to update assigned driver");
+    } finally {
+      setUpdatingDriver(false);
+    }
+  };
 
   const selected = records.find((record) => record.id === selectedId);
 
@@ -414,7 +451,34 @@ export function RecordsPanel({ records, drivers, groups = [], saveRecord, delete
         <div><dt>Phone</dt><dd>{selected.phone || "—"}</dd></div>
         <div><dt>Email</dt><dd>{selected.email || "—"}</dd></div>
         <div><dt>Portions</dt><dd>{selected.portions}</dd></div>
-        <div><dt>Delivery Method / Driver</dt><dd>{selected.driverId === "self-pickup" || selected.driverId === "pickup" ? "🚶 Self Pick Up (Direct Collection)" : (drivers.find((item) => item.id === selected.driverId)?.name || "Unassigned")}</dd></div>
+        <div>
+          <dt>Delivery Method / Driver</dt>
+          <dd>
+            {isAdmin ? (
+              <div className="quick-driver-select-container">
+                <select
+                  className="quick-driver-select"
+                  value={selected.driverId || ""}
+                  onChange={(e) => void handleQuickChangeDriver(selected, e.target.value)}
+                  disabled={updatingDriver}
+                  aria-label="Quick assign driver"
+                >
+                  <option value="">Unassigned (Needs Driver)</option>
+                  <option value="self-pickup">🚶 Self Pick Up (Direct Collection)</option>
+                  {drivers.filter((d) => d.active).map((driver) => (
+                    <option key={driver.id} value={driver.id}>
+                      🛵 {driver.name}{driver.vehicle ? ` (${driver.vehicle})` : ""}{driver.area ? ` · ${driver.area}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              selected.driverId === "self-pickup" || selected.driverId === "pickup"
+                ? "🚶 Self Pick Up (Direct Collection)"
+                : (drivers.find((item) => item.id === selected.driverId)?.name || "Unassigned")
+            )}
+          </dd>
+        </div>
         <div><dt>Group</dt><dd>{selected.groupName || "—"}</dd></div>
         <div><dt>Area</dt><dd>{selected.area || "—"}</dd></div>
       </dl>

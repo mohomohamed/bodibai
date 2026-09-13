@@ -226,6 +226,7 @@ function AuthenticatedApp({
             records={sync.records}
             drivers={sync.drivers}
             groups={groups}
+            isAdmin={isAdminUser(session.userName)}
             saveRecord={sync.saveRecord}
             deleteRecord={sync.deleteRecord}
             saveAddress={sync.saveAddress}
